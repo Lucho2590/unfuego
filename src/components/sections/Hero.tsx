@@ -23,7 +23,7 @@ export function Hero() {
 
         {/* Subheadline */}
         <p className="text-display-md text-muted-foreground font-light opacity-0 animate-fade-in-up animation-delay-600">
-          Diseño para cualquier lugar
+          Pensado para cualquier lugar
         </p>
       </div>
 
