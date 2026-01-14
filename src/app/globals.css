@@ -1,26 +1,232 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
+/* Un Fuego - Tema Oscuro con acentos de fuego */
+:root {
+  --radius: 0.625rem;
+
+  /* Paleta oscura - colores base */
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.95 0 0);
+
+  --card: oklch(0.12 0 0);
+  --card-foreground: oklch(0.95 0 0);
+
+  /* Acentos de fuego - naranja/ember */
+  --primary: oklch(0.65 0.18 45);
+  --primary-foreground: oklch(0.98 0 0);
+
+  --muted: oklch(0.18 0 0);
+  --muted-foreground: oklch(0.55 0 0);
+
+  --accent: oklch(0.60 0.20 35);
+  --accent-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.20 0 0);
+  --input: oklch(0.20 0 0);
+  --ring: oklch(0.65 0.18 45);
+
+  /* Spacing rhythm */
+  --section-padding-y: 6rem;
+  --section-padding-x: 1.5rem;
+
+  /* Animation durations */
+  --duration-slow: 1.5s;
+  --duration-medium: 0.8s;
+  --duration-fast: 0.3s;
+}
+
+@media (min-width: 768px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --section-padding-y: 8rem;
+    --section-padding-x: 4rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (min-width: 1024px) {
+  :root {
+    --section-padding-y: 10rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  ::selection {
+    @apply bg-primary/30 text-foreground;
+  }
+}
+
+/* Custom Typography */
+@layer utilities {
+  .text-display-lg {
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .text-display-md {
+    font-size: clamp(1.25rem, 3vw, 2rem);
+    line-height: 1.3;
+  }
+
+  .text-body-lg {
+    font-size: clamp(1.125rem, 2vw, 1.25rem);
+    line-height: 1.8;
+  }
+}
+
+/* Custom Animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Ignite animation - text lights up from left to right */
+@keyframes ignite {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+@keyframes ignite-glow {
+  0%, 40% {
+    text-shadow: none;
+  }
+  100% {
+    text-shadow: 0 0 30px rgba(255, 150, 50, 0.3);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fade-in-up var(--duration-medium) ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fade-in var(--duration-slow) ease-out forwards;
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 4s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* Ignite text effect */
+  .animate-ignite {
+    background: linear-gradient(
+      90deg,
+      oklch(0.95 0 0) 0%,
+      oklch(0.95 0 0) 45%,
+      oklch(0.45 0 0) 55%,
+      oklch(0.45 0 0) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: ignite 2s ease-out forwards, ignite-glow 2s ease-out forwards;
+  }
+
+  /* Animation delays */
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+  .animation-delay-600 {
+    animation-delay: 600ms;
+  }
+  .animation-delay-800 {
+    animation-delay: 800ms;
+  }
+  .animation-delay-1000 {
+    animation-delay: 1000ms;
+  }
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
