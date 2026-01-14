@@ -7,9 +7,6 @@ export const metadata: Metadata = {
   description:
     "Un fuego se está encendiendo. En cualquier lugar.",
   keywords: ["fuego", "cocina", "diseño", "parrilla", "outdoor", "camping"],
-  icons: {
-    icon: "/favicon.svg",
-  },
   openGraph: {
     title: "Un Fuego",
     description: "Un fuego se está encendiendo.",
