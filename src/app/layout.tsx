@@ -3,9 +3,13 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
+
   title: "Un Fuego ",
   description:
     "Un fuego se está encendiendo. En cualquier lugar.",
+    icons: {
+      icon: "/favicon.ico",
+    },
   keywords: ["fuego", "cocina", "diseño", "parrilla", "outdoor", "camping"],
   openGraph: {
     title: "Un Fuego",
