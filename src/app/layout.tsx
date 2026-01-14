@@ -15,6 +15,11 @@ export const metadata: Metadata = {
     description: "Un fuego se está encendiendo.",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Un Fuego",
+    description: "Un fuego se está encendiendo.",
+  },
 };
 
 export default function RootLayout({
