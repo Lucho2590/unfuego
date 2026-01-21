@@ -3,6 +3,12 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.unfuegomdq.com.ar"),
+
+  alternates: {
+    canonical: "/",
+  },
+
   title: "Un Fuego",
   description: "Un fuego se está encendiendo. En cualquier lugar.",
 
