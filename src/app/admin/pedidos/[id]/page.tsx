@@ -1,0 +1,112 @@
+import { notFound } from "next/navigation";
+import { getOrderById } from "@/lib/firebase/orders";
+import { Badge } from "@/components/ui/badge";
+import { UpdateOrderStatus } from "@/components/admin/UpdateOrderStatus";
+
+export const dynamic = "force-dynamic";
+
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+const statusLabels: Record<string, string> = {
+  pending: "Pendiente",
+  approved: "Aprobado",
+  shipped: "Enviado",
+  delivered: "Entregado",
+  rejected: "Rechazado",
+  cancelled: "Cancelado",
+};
+
+export default async function OrderDetailPage({ params }: Props) {
+  const { id } = await params;
+  const order = await getOrderById(id);
+
+  if (!order) {
+    notFound();
+  }
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-light">
+          Pedido {order.orderNumber}
+        </h1>
+        <Badge>{statusLabels[order.status] ?? order.status}</Badge>
+      </div>
+
+      {/* Customer */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+        <h2 className="text-sm font-medium">Cliente</h2>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p>{order.customer.name}</p>
+          <p>{order.customer.email}</p>
+          <p>{order.customer.phone}</p>
+        </div>
+      </div>
+
+      {/* Shipping */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+        <h2 className="text-sm font-medium">Envío</h2>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p>{order.shipping.address}</p>
+          <p>
+            {order.shipping.city}, {order.shipping.province}
+          </p>
+          <p>CP: {order.shipping.postalCode}</p>
+          {order.shipping.notes && <p>Notas: {order.shipping.notes}</p>}
+        </div>
+      </div>
+
+      {/* Items */}
+      <div className="rounded-lg border border-border bg-card">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-sm font-medium">Productos</h2>
+        </div>
+        <div className="divide-y divide-border">
+          {order.items.map((item, i) => (
+            <div key={i} className="p-4 flex justify-between">
+              <div>
+                <p className="text-sm">{item.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  x{item.quantity} — ${item.price.toLocaleString("es-AR")} c/u
+                </p>
+              </div>
+              <p className="text-sm font-medium">
+                ${(item.price * item.quantity).toLocaleString("es-AR")}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="p-4 border-t border-border space-y-1">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span>${order.subtotal.toLocaleString("es-AR")}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Envío</span>
+            <span>${order.shippingCost.toLocaleString("es-AR")}</span>
+          </div>
+          <div className="flex justify-between text-sm font-medium pt-1 border-t border-border">
+            <span>Total</span>
+            <span>${order.total.toLocaleString("es-AR")}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* MercadoPago info */}
+      {order.mercadopago?.paymentId && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+          <h2 className="text-sm font-medium">MercadoPago</h2>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>Payment ID: {order.mercadopago.paymentId}</p>
+            <p>Estado: {order.mercadopago.paymentStatus}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Update status */}
+      <UpdateOrderStatus orderId={order.id} currentStatus={order.status} />
+    </div>
+  );
+}

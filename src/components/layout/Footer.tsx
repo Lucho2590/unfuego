@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Instagram } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 
@@ -14,17 +15,31 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Instagram */}
-          <a
-            href="https://instagram.com/unfuegomdq"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors duration-300"
-            aria-label="Seguir en Instagram"
-          >
-            <Instagram className="w-5 h-5" />
-            <span className="text-sm">@unfuegomdq</span>
-          </a>
+          {/* Nav links */}
+          <nav className="flex items-center gap-6">
+            <Link
+              href="/tienda"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Tienda
+            </Link>
+            <Link
+              href="/la-llama"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              La Llama
+            </Link>
+            <a
+              href="https://instagram.com/unfuegomdq"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Seguir en Instagram"
+            >
+              <Instagram className="w-5 h-5" />
+              <span className="text-sm">@unfuegomdq</span>
+            </a>
+          </nav>
         </div>
       </div>
     </footer>
