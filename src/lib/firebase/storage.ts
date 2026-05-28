@@ -4,19 +4,19 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import { storage } from "./config";
+import { getFirebaseStorage } from "./config";
 
 export async function uploadImage(
   file: File,
   path: string
 ): Promise<string> {
-  const storageRef = ref(storage, path);
+  const storageRef = ref(getFirebaseStorage(), path);
   const snapshot = await uploadBytes(storageRef, file);
   return getDownloadURL(snapshot.ref);
 }
 
 export async function deleteImage(path: string): Promise<void> {
-  const storageRef = ref(storage, path);
+  const storageRef = ref(getFirebaseStorage(), path);
   await deleteObject(storageRef);
 }
 
