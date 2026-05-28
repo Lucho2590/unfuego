@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
+import { Toaster } from "@/components/ui/sonner";
+import { Navbar } from "@/components/layout/Navbar";
+import { AbandonedCartTracker } from "@/components/cart/AbandonedCartTracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -51,7 +54,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${GeistSans.variable} font-sans antialiased`}>
+        <Navbar />
         {children}
+        <AbandonedCartTracker />
+        <Toaster />
       </body>
     </html>
   );
