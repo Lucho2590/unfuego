@@ -6,6 +6,7 @@ import {
   isPublicHttps,
 } from "@/lib/mercadopago/client";
 import { createOrder, updateOrder } from "@/lib/firebase/orders";
+import { isMercadoPagoEnabled } from "@/lib/mercadopago/settings";
 import { checkoutSchema } from "@/lib/validations/checkout";
 import type { OrderItem } from "@/lib/types";
 
@@ -35,6 +36,13 @@ export async function POST(request: Request) {
     const items: OrderItem[] = body.items;
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 });
+    }
+
+    if (!(await isMercadoPagoEnabled())) {
+      return NextResponse.json(
+        { error: "El pago con MercadoPago no está disponible en este momento" },
+        { status: 503 }
+      );
     }
 
     const ctx = await getMercadoPagoContext();

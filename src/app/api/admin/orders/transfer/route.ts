@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyIdToken, fsQuery } from "@/lib/firebase/admin";
+import { verifySession, fsQuery } from "@/lib/firebase/admin";
 import { getOrderById, updateOrder, updateOrderPayment } from "@/lib/firebase/orders";
 import { sendTransferRejected } from "@/lib/email/send";
 import type { Order } from "@/lib/types";
@@ -14,7 +14,7 @@ async function requireAdminEmail(): Promise<string | null> {
   const cookieStore = await cookies();
   const session = cookieStore.get("__session");
   if (!session?.value) return null;
-  const user = await verifyIdToken(session.value);
+  const user = await verifySession(session.value);
   if (!user) return null;
   if (ADMIN_EMAILS.includes(user.email)) return user.email;
   try {

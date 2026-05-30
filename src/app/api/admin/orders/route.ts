@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyIdToken } from "@/lib/firebase/admin";
+import { verifySession } from "@/lib/firebase/admin";
 import { updateOrder, getOrderById } from "@/lib/firebase/orders";
 import { sendOrderShipped } from "@/lib/email/send";
 import type { Order } from "@/lib/types";
@@ -10,7 +10,7 @@ async function verifyAdmin(): Promise<boolean> {
   const session = cookieStore.get("__session");
   if (!session?.value) return false;
 
-  const user = await verifyIdToken(session.value);
+  const user = await verifySession(session.value);
   return !!user;
 }
 
