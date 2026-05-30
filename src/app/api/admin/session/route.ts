@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyIdToken, fsQuery, fsUpdate } from "@/lib/firebase/admin";
+import { verifyIdToken, createSessionCookie, fsQuery, fsUpdate } from "@/lib/firebase/admin";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -51,8 +51,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
+    // Mintear un session cookie de Firebase (larga duración) a partir del idToken validado.
+    const sessionCookie = await createSessionCookie(idToken, SESSION_MAX_AGE * 1000);
+
     const cookieStore = await cookies();
-    cookieStore.set("__session", idToken, {
+    cookieStore.set("__session", sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

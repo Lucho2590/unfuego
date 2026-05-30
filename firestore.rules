@@ -1,21 +1,12 @@
 rules_version = '2';
 
-// ⚠️ IMPORTANTE — LEER ANTES DE DESPLEGAR
+// El acceso server (checkout, webhook, panel admin) usa el Firebase Admin SDK con service
+// account (ver src/lib/firebase/admin-app.ts), que BYPASSA estas reglas. Por eso estas reglas
+// cierran de verdad el acceso del CLIENTE: solo se abre lo que el SDK cliente necesita leer en
+// tiempo real (catálogo de productos y la orden de confirmación). Todo lo demás es deny.
 //
-// Hoy la app accede a Firestore vía la REST API usando la API key PÚBLICA y SIN token de
-// autenticación (ver src/lib/firebase/admin.ts). Para que el server (checkout, webhook,
-// panel admin) funcione, las reglas deben permitir ese acceso no autenticado — por eso,
-// con la arquitectura actual, estas reglas NO protegen de verdad los datos.
-//
-// Estas reglas documentan la INTENCIÓN y sirven para el SDK cliente (onSnapshot de la
-// confirmación). La protección real requiere la tarea de hardening pendiente:
-//   - Mover el acceso server a Firebase Admin SDK con service account (bypassa reglas), o
-//     a llamadas REST autenticadas con un token de servicio.
-//   - Recién entonces cerrar estas reglas a deny-by-default.
-//
-// Mientras tanto, la seguridad efectiva la dan los route handlers server-side
-// (verifyAdmin / requireAdminEmail) y que los secretos (tokens MP) viven en env vars,
-// nunca en la DB ni en el bundle.
+// Las credenciales de MercadoPago se guardan encriptadas en `settings/mercadopago` (AES-GCM con
+// MP_ENCRYPTION_KEY); aun con la colección cerrada, el cifrado es defensa en profundidad.
 
 service cloud.firestore {
   match /databases/{database}/documents {

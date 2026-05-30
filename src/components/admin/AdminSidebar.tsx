@@ -7,7 +7,7 @@ import {
   Package,
   ShoppingBag,
   UserPlus,
-  Settings,
+  CreditCard,
   ExternalLink,
   LogOut,
 } from "lucide-react";
@@ -19,7 +19,7 @@ const links = [
   { href: "/admin/productos", label: "Productos", icon: Package },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/admin/invitar", label: "Invitar admins", icon: UserPlus },
-  { href: "/admin/configuracion", label: "Configuración", icon: Settings },
+  { href: "/admin/configuracion-de-pagos", label: "Configuración de pagos", icon: CreditCard },
 ];
 
 export function AdminSidebar() {
@@ -33,7 +33,7 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 min-h-screen border-r border-border bg-card flex flex-col">
+    <aside className="w-64 h-screen sticky top-0 border-r border-border bg-card flex flex-col">
       <div className="p-4 border-b border-border">
         <Link href="/admin">
           <Logo size="sm" />

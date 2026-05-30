@@ -21,6 +21,7 @@ export function CheckoutForm() {
   const [loading, setLoading] = useState(false);
 
   const [method, setMethod] = useState<PaymentMethod>("mercadopago");
+  const [mpAvailable, setMpAvailable] = useState(true);
   const [transfer, setTransfer] = useState<{ enabled: boolean; discountPercent: number }>({
     enabled: false,
     discountPercent: 0,
@@ -29,16 +30,23 @@ export function CheckoutForm() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/transfer/settings");
-        if (res.ok) {
-          const data = await res.json();
-          setTransfer({
-            enabled: !!data.enabled,
-            discountPercent: Number(data.discountPercent) || 0,
-          });
-        }
+        const [tRes, mRes] = await Promise.all([
+          fetch("/api/transfer/settings"),
+          fetch("/api/mercadopago/settings"),
+        ]);
+        const t = tRes.ok ? await tRes.json() : { enabled: false, discountPercent: 0 };
+        const m = mRes.ok ? await mRes.json() : { available: true };
+        const transferEnabled = !!t.enabled;
+        const mpAvail = m.available !== false;
+        setTransfer({
+          enabled: transferEnabled,
+          discountPercent: Number(t.discountPercent) || 0,
+        });
+        setMpAvailable(mpAvail);
+        // Si MP no está disponible pero la transferencia sí, arrancar en transferencia.
+        if (!mpAvail && transferEnabled) setMethod("transfer");
       } catch {
-        // si falla, queda solo MercadoPago
+        // si falla, queda el default (MercadoPago)
       }
     })();
   }, []);
@@ -275,8 +283,8 @@ export function CheckoutForm() {
             }
           />
 
-          {/* Método de pago (solo si la transferencia está habilitada) */}
-          {transfer.enabled && (
+          {/* Método de pago: selector solo si hay más de una opción disponible */}
+          {mpAvailable && transfer.enabled && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Método de pago</p>
               <div className="grid grid-cols-2 gap-2">
@@ -309,11 +317,17 @@ export function CheckoutForm() {
             </div>
           )}
 
+          {!mpAvailable && !transfer.enabled && (
+            <p className="text-sm text-yellow-600 text-center">
+              No hay métodos de pago disponibles en este momento.
+            </p>
+          )}
+
           <Button
             type="submit"
             className="w-full"
             size="lg"
-            disabled={loading}
+            disabled={loading || (!mpAvailable && !transfer.enabled)}
           >
             {loading
               ? "Procesando..."

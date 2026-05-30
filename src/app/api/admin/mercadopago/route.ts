@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyIdToken, fsQuery } from "@/lib/firebase/admin";
-import { getSettingsForUI, setActiveMode } from "@/lib/mercadopago/settings";
+import { verifySession, fsQuery } from "@/lib/firebase/admin";
+import {
+  getSettingsForUI,
+  setActiveMode,
+  setEnabled,
+  saveMercadoPagoCredentials,
+} from "@/lib/mercadopago/settings";
 import type { MercadoPagoMode } from "@/lib/types";
+
+type PutBody =
+  | { action?: "setMode"; activeMode: MercadoPagoMode }
+  | { action: "setEnabled"; enabled: boolean }
+  | {
+      action: "saveCredentials";
+      mode: MercadoPagoMode;
+      accessToken?: string;
+      webhookSecret?: string;
+    };
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -19,7 +34,7 @@ async function requireAdminEmail(): Promise<string | null> {
   const session = cookieStore.get("__session");
   if (!session?.value) return null;
 
-  const user = await verifyIdToken(session.value);
+  const user = await verifySession(session.value);
   if (!user) return null;
 
   if (ADMIN_EMAILS.includes(user.email)) return user.email;
@@ -55,21 +70,35 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const { activeMode } = (await request.json()) as { activeMode?: MercadoPagoMode };
-    if (activeMode !== "test" && activeMode !== "production") {
-      return NextResponse.json({ error: "Modo inválido" }, { status: 400 });
+    const body = (await request.json()) as PutBody;
+
+    if (body.action === "saveCredentials") {
+      if (body.mode !== "test" && body.mode !== "production") {
+        return NextResponse.json({ error: "Modo inválido" }, { status: 400 });
+      }
+      await saveMercadoPagoCredentials(
+        body.mode,
+        { accessToken: body.accessToken, webhookSecret: body.webhookSecret },
+        adminEmail
+      );
+    } else if (body.action === "setEnabled") {
+      await setEnabled(!!body.enabled, adminEmail);
+    } else {
+      // action "setMode" (o payload legacy { activeMode }).
+      const activeMode = body.activeMode;
+      if (activeMode !== "test" && activeMode !== "production") {
+        return NextResponse.json({ error: "Modo inválido" }, { status: 400 });
+      }
+      await setActiveMode(activeMode, adminEmail);
     }
 
-    await setActiveMode(activeMode, adminEmail);
     const settings = await getSettingsForUI();
     return NextResponse.json({ success: true, settings });
   } catch (error) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Error al cambiar el modo activo",
+          error instanceof Error ? error.message : "Error al guardar la configuración",
       },
       { status: 400 }
     );

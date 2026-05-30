@@ -1,78 +1,49 @@
-// Firebase server utilities — NO Admin SDK
-// Uses Firestore REST API + Google Identity API
+// Firebase server utilities — Firebase Admin SDK (service account).
+// El acceso pasa por el Admin SDK, que BYPASSA las security rules: la DB queda protegida por
+// las rules para el cliente y accesible solo desde el server. Módulo server-only.
+import { Timestamp } from "firebase-admin/firestore";
+import { getAdminDb, getAdminAuth } from "./admin-app";
 
-const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "unfuego";
-const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "";
-const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-
-// ─── Firestore value conversion ───
-
-type FsValue = Record<string, unknown>;
-
-function toFsValue(value: unknown): FsValue {
-  if (value === null || value === undefined) return { nullValue: null };
-  if (typeof value === "string") return { stringValue: value };
-  if (typeof value === "boolean") return { booleanValue: value };
-  if (typeof value === "number") {
-    return Number.isInteger(value)
-      ? { integerValue: String(value) }
-      : { doubleValue: value };
-  }
-  if (Array.isArray(value)) {
-    return { arrayValue: { values: value.map(toFsValue) } };
-  }
-  if (typeof value === "object") {
-    const fields: Record<string, FsValue> = {};
+// ─── Normalización de lectura ───
+// El SDK devuelve `Timestamp` para campos de fecha; los convertimos a ISO string para preservar
+// el contrato que tenían los consumidores con la implementación REST anterior.
+function normalize(value: unknown): unknown {
+  if (value instanceof Timestamp) return value.toDate().toISOString();
+  if (Array.isArray(value)) return value.map(normalize);
+  if (value && typeof value === "object" && (value as object).constructor === Object) {
+    const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      fields[k] = toFsValue(v);
+      out[k] = normalize(v);
     }
-    return { mapValue: { fields } };
+    return out;
   }
-  return { stringValue: String(value) };
+  return value;
 }
 
-function fromFsValue(val: Record<string, unknown>): unknown {
-  if ("stringValue" in val) return val.stringValue;
-  if ("integerValue" in val) return Number(val.integerValue);
-  if ("doubleValue" in val) return val.doubleValue;
-  if ("booleanValue" in val) return val.booleanValue;
-  if ("timestampValue" in val) return val.timestampValue;
-  if ("nullValue" in val) return null;
-  if ("arrayValue" in val) {
-    const arr = val.arrayValue as { values?: FsValue[] };
-    return (arr?.values ?? []).map(fromFsValue);
-  }
-  if ("mapValue" in val) {
-    const map = val.mapValue as { fields?: Record<string, FsValue> };
-    return parseFields(map?.fields ?? {});
-  }
-  return null;
+function normalizeDoc(id: string, data: Record<string, unknown> | undefined) {
+  return { id, ...(normalize(data ?? {}) as Record<string, unknown>) };
 }
 
-function parseFields(fields: Record<string, FsValue>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(fields)) {
-    result[key] = fromFsValue(val);
-  }
-  return result;
-}
-
-function docId(name: string): string {
-  return name.split("/").pop()!;
-}
+// Mapea los operadores legacy (estilo REST) a los del SDK.
+const OP_MAP: Record<string, FirebaseFirestore.WhereFilterOp> = {
+  EQUAL: "==",
+  NOT_EQUAL: "!=",
+  LESS_THAN: "<",
+  LESS_THAN_OR_EQUAL: "<=",
+  GREATER_THAN: ">",
+  GREATER_THAN_OR_EQUAL: ">=",
+  ARRAY_CONTAINS: "array-contains",
+  IN: "in",
+  ARRAY_CONTAINS_ANY: "array-contains-any",
+  NOT_IN: "not-in",
+};
 
 // ─── Firestore CRUD ───
 
 export async function fsGet(collection: string, id: string) {
-  const res = await fetch(`${FIRESTORE_BASE}/${collection}/${id}?key=${API_KEY}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error(`fsGet error: ${res.status}`);
-  }
-  const doc = await res.json();
-  return { id: docId(doc.name), ...parseFields(doc.fields ?? {}) };
+  const snap = await getAdminDb().doc(`${collection}/${id}`).get();
+  if (!snap.exists) return null;
+  return normalizeDoc(snap.id, snap.data());
 }
 
 export async function fsQuery(
@@ -81,178 +52,118 @@ export async function fsQuery(
   orderBy?: { field: string; direction?: "ASCENDING" | "DESCENDING" },
   limit?: number
 ) {
-  const q: Record<string, unknown> = {
-    from: [{ collectionId: collection }],
-  };
+  let q: FirebaseFirestore.Query = getAdminDb().collection(collection);
 
-  if (filters?.length) {
-    q.where =
-      filters.length === 1
-        ? {
-            fieldFilter: {
-              field: { fieldPath: filters[0].field },
-              op: filters[0].op,
-              value: toFsValue(filters[0].value),
-            },
-          }
-        : {
-            compositeFilter: {
-              op: "AND",
-              filters: filters.map((f) => ({
-                fieldFilter: {
-                  field: { fieldPath: f.field },
-                  op: f.op,
-                  value: toFsValue(f.value),
-                },
-              })),
-            },
-          };
+  for (const f of filters ?? []) {
+    q = q.where(f.field, OP_MAP[f.op] ?? "==", f.value);
   }
-
   if (orderBy) {
-    q.orderBy = [{ field: { fieldPath: orderBy.field }, direction: orderBy.direction ?? "DESCENDING" }];
+    q = q.orderBy(orderBy.field, orderBy.direction === "ASCENDING" ? "asc" : "desc");
   }
-  if (limit) q.limit = limit;
+  if (limit) q = q.limit(limit);
 
-  const res = await fetch(
-    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery?key=${API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ structuredQuery: q }),
-      cache: "no-store",
-    }
-  );
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`fsQuery error: ${res.status} ${text}`);
-  }
-
-  const results: { document?: { name: string; fields?: Record<string, FsValue> } }[] = await res.json();
-  return results
-    .filter((r) => r.document)
-    .map((r) => ({ id: docId(r.document!.name), ...parseFields(r.document!.fields ?? {}) }));
+  const snap = await q.get();
+  return snap.docs.map((d) => normalizeDoc(d.id, d.data()));
 }
 
 export async function fsAdd(collection: string, data: Record<string, unknown>): Promise<string> {
-  const fields: Record<string, FsValue> = {};
-  for (const [key, value] of Object.entries(data)) {
-    fields[key] = toFsValue(value);
-  }
-  const now = new Date().toISOString();
-  fields.createdAt = { timestampValue: now };
-  fields.updatedAt = { timestampValue: now };
-
-  const res = await fetch(`${FIRESTORE_BASE}/${collection}?key=${API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fields }),
+  const now = Timestamp.now();
+  const ref = await getAdminDb().collection(collection).add({
+    ...data,
+    createdAt: now,
+    updatedAt: now,
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`fsAdd error: ${res.status} ${text}`);
-  }
-  const doc = await res.json();
-  return docId(doc.name);
+  return ref.id;
 }
 
 /**
  * Crea o sobrescribe un documento con un ID propio (a diferencia de fsAdd que autogenera).
- * Con `createOnly: true` usa la precondición `currentDocument.exists=false`: si el doc ya
- * existe, Firestore responde 409/412 y se devuelve `{ created: false }` (idempotencia atómica,
- * usada para el audit trail del webhook). Soporta paths con subcolección
- * (ej. `orders/{orderId}/events`).
+ * - `merge: true` → merge superficial/profundo (no borra campos no enviados).
+ * - `createOnly: true` → falla si el doc ya existe y devuelve `{ created: false }` (idempotencia
+ *   atómica para el audit trail del webhook).
+ * - sin opciones → reemplaza el doc completo (semántica "set").
+ * Soporta paths con subcolección (ej. `orders/{orderId}/events`).
  */
 export async function fsSet(
   collection: string,
   id: string,
   data: Record<string, unknown>,
-  opts?: { createOnly?: boolean; timestamps?: boolean }
+  opts?: { createOnly?: boolean; timestamps?: boolean; merge?: boolean }
 ): Promise<{ created: boolean }> {
-  const fields: Record<string, FsValue> = {};
-  for (const [key, value] of Object.entries(data)) {
-    fields[key] = toFsValue(value);
-  }
+  const ref = getAdminDb().doc(`${collection}/${id}`);
+  const payload: Record<string, unknown> = { ...data };
+
   if (opts?.timestamps) {
-    const now = new Date().toISOString();
-    if (!("createdAt" in fields)) fields.createdAt = { timestampValue: now };
-    fields.updatedAt = { timestampValue: now };
+    const now = Timestamp.now();
+    if (!("createdAt" in payload)) payload.createdAt = now;
+    payload.updatedAt = now;
   }
 
-  const params = new URLSearchParams();
-  if (opts?.createOnly) params.set("currentDocument.exists", "false");
-  params.set("key", API_KEY);
-
-  const res = await fetch(`${FIRESTORE_BASE}/${collection}/${id}?${params.toString()}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fields }),
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    // createOnly + doc ya existente → precondición fallida: no es un error, es idempotencia.
-    if (opts?.createOnly && (res.status === 409 || res.status === 412 || res.status === 400)) {
-      const text = await res.text();
-      if (text.includes("FAILED_PRECONDITION") || text.includes("ALREADY_EXISTS")) {
-        return { created: false };
-      }
-      throw new Error(`fsSet error: ${res.status} ${text}`);
+  if (opts?.createOnly) {
+    try {
+      await ref.create(payload);
+      return { created: true };
+    } catch (error) {
+      // code 6 = ALREADY_EXISTS → no es error, es idempotencia.
+      const code = (error as { code?: number }).code;
+      if (code === 6) return { created: false };
+      throw error;
     }
-    const text = await res.text();
-    throw new Error(`fsSet error: ${res.status} ${text}`);
   }
+
+  await ref.set(payload, opts?.merge ? { merge: true } : {});
   return { created: true };
 }
 
+/**
+ * Actualiza campos de un documento preservando el resto (merge). Crea el doc si no existe
+ * (equivalente al PATCH con updateMask de la implementación REST anterior).
+ */
 export async function fsUpdate(collection: string, id: string, data: Record<string, unknown>) {
-  const fields: Record<string, FsValue> = {};
-  const paths: string[] = [];
-
-  for (const [key, value] of Object.entries(data)) {
-    fields[key] = toFsValue(value);
-    paths.push(key);
-  }
-  fields.updatedAt = { timestampValue: new Date().toISOString() };
-  paths.push("updatedAt");
-
-  const mask = paths.map((f) => `updateMask.fieldPaths=${f}`).join("&");
-  const res = await fetch(`${FIRESTORE_BASE}/${collection}/${id}?${mask}&key=${API_KEY}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fields }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`fsUpdate error: ${res.status} ${text}`);
-  }
+  await getAdminDb().doc(`${collection}/${id}`).set(
+    { ...data, updatedAt: Timestamp.now() },
+    { merge: true }
+  );
 }
 
 export async function fsDelete(collection: string, id: string) {
-  const res = await fetch(`${FIRESTORE_BASE}/${collection}/${id}?key=${API_KEY}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error(`fsDelete error: ${res.status}`);
+  await getAdminDb().doc(`${collection}/${id}`).delete();
 }
 
-// ─── Auth: verify ID token ───
+// ─── Auth: verificación de ID token vía Admin SDK ───
+// El Admin SDK verifica la firma localmente contra las claves públicas de Google (cacheadas),
+// así que no hay round-trip de red por request.
 
-export async function verifyIdToken(idToken: string): Promise<{ email: string; uid: string } | null> {
+export async function verifyIdToken(
+  idToken: string
+): Promise<{ email: string; uid: string } | null> {
   try {
-    const res = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const user = data.users?.[0];
-    if (!user) return null;
-    return { email: user.email, uid: user.localId };
+    const decoded = await getAdminAuth().verifyIdToken(idToken);
+    return { email: decoded.email ?? "", uid: decoded.uid };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Auth: session cookies ───
+// El cookie `__session` guarda un session cookie de Firebase (no el idToken crudo de 1h). Lo
+// mintea el login a partir del idToken y dura varios días; el server lo valida en cada request.
+
+/** Crea un session cookie de Firebase a partir de un idToken válido. `expiresInMs` ≤ 14 días. */
+export async function createSessionCookie(
+  idToken: string,
+  expiresInMs: number
+): Promise<string> {
+  return getAdminAuth().createSessionCookie(idToken, { expiresIn: expiresInMs });
+}
+
+/** Valida el session cookie. Devuelve el usuario o null si es inválido/vencido. */
+export async function verifySession(
+  sessionCookie: string
+): Promise<{ email: string; uid: string } | null> {
+  try {
+    const decoded = await getAdminAuth().verifySessionCookie(sessionCookie);
+    return { email: decoded.email ?? "", uid: decoded.uid };
   } catch {
     return null;
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyIdToken, fsAdd, fsQuery, fsDelete, fsUpdate } from "@/lib/firebase/admin";
+import { verifySession, fsAdd, fsQuery, fsDelete, fsUpdate } from "@/lib/firebase/admin";
 import { resend } from "@/lib/resend";
 import { AdminInvitationEmail } from "@/lib/email/templates/admin-invitation";
 
@@ -11,7 +11,7 @@ async function verifyAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
   const session = cookieStore.get("__session");
   if (!session?.value) return false;
-  const user = await verifyIdToken(session.value);
+  const user = await verifySession(session.value);
   return !!user;
 }
 

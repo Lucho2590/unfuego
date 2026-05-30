@@ -108,21 +108,44 @@ export interface Order {
   updatedAt: string;
 }
 
-// ─── MercadoPago settings (solo el modo activo vive en DB; los tokens son env vars) ───
+// ─── MercadoPago settings ───
+// El modo activo y las credenciales (encriptadas) viven en DB; además se soporta fallback a
+// env vars. Los tokens nunca se guardan ni se devuelven en claro.
 
 export type MercadoPagoMode = "test" | "production";
 
+// Credenciales de un modo, encriptadas (formato "v1:...") tal como se persisten en Firestore.
+export interface EncryptedModeCreds {
+  accessTokenEnc?: string;
+  webhookSecretEnc?: string;
+}
+
 export interface MercadoPagoSettings {
   activeMode: MercadoPagoMode;
+  // Si está deshabilitado, MercadoPago no se ofrece en el checkout. Default (ausente) = true.
+  enabled?: boolean;
+  test?: EncryptedModeCreds;
+  production?: EncryptedModeCreds;
   updatedAt?: string;
   updatedBy?: string;
 }
 
+// De dónde se resolvieron las credenciales de un modo.
+export type CredsSource = "db" | "env" | null;
+
 // Forma enmascarada que devuelve el endpoint admin a la UI (nunca el token completo).
+export interface MercadoPagoModeUI {
+  configured: boolean;
+  tokenMasked: string | null;
+  source: CredsSource;
+  hasWebhookSecret: boolean;
+}
+
 export interface MercadoPagoSettingsUI {
   activeMode: MercadoPagoMode;
-  test: { configured: boolean; tokenMasked: string | null };
-  production: { configured: boolean; tokenMasked: string | null };
+  enabled: boolean;
+  test: MercadoPagoModeUI;
+  production: MercadoPagoModeUI;
   updatedAt?: string;
   updatedBy?: string;
 }
