@@ -157,6 +157,55 @@ export async function fsAdd(collection: string, data: Record<string, unknown>): 
   return docId(doc.name);
 }
 
+/**
+ * Crea o sobrescribe un documento con un ID propio (a diferencia de fsAdd que autogenera).
+ * Con `createOnly: true` usa la precondición `currentDocument.exists=false`: si el doc ya
+ * existe, Firestore responde 409/412 y se devuelve `{ created: false }` (idempotencia atómica,
+ * usada para el audit trail del webhook). Soporta paths con subcolección
+ * (ej. `orders/{orderId}/events`).
+ */
+export async function fsSet(
+  collection: string,
+  id: string,
+  data: Record<string, unknown>,
+  opts?: { createOnly?: boolean; timestamps?: boolean }
+): Promise<{ created: boolean }> {
+  const fields: Record<string, FsValue> = {};
+  for (const [key, value] of Object.entries(data)) {
+    fields[key] = toFsValue(value);
+  }
+  if (opts?.timestamps) {
+    const now = new Date().toISOString();
+    if (!("createdAt" in fields)) fields.createdAt = { timestampValue: now };
+    fields.updatedAt = { timestampValue: now };
+  }
+
+  const params = new URLSearchParams();
+  if (opts?.createOnly) params.set("currentDocument.exists", "false");
+  params.set("key", API_KEY);
+
+  const res = await fetch(`${FIRESTORE_BASE}/${collection}/${id}?${params.toString()}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fields }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    // createOnly + doc ya existente → precondición fallida: no es un error, es idempotencia.
+    if (opts?.createOnly && (res.status === 409 || res.status === 412 || res.status === 400)) {
+      const text = await res.text();
+      if (text.includes("FAILED_PRECONDITION") || text.includes("ALREADY_EXISTS")) {
+        return { created: false };
+      }
+      throw new Error(`fsSet error: ${res.status} ${text}`);
+    }
+    const text = await res.text();
+    throw new Error(`fsSet error: ${res.status} ${text}`);
+  }
+  return { created: true };
+}
+
 export async function fsUpdate(collection: string, id: string, data: Record<string, unknown>) {
   const fields: Record<string, FsValue> = {};
   const paths: string[] = [];

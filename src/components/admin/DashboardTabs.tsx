@@ -59,7 +59,7 @@ export function DashboardTabs({
   const abandonedValue = abandonedCarts.reduce((sum, c) => sum + (c.total ?? 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-light">Dashboard</h1>
       <DashboardStats orders={orders} products={products} />
 

@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// ⚠️ IMPORTANTE — LEER ANTES DE DESPLEGAR
+//
+// Hoy la app accede a Firestore vía la REST API usando la API key PÚBLICA y SIN token de
+// autenticación (ver src/lib/firebase/admin.ts). Para que el server (checkout, webhook,
+// panel admin) funcione, las reglas deben permitir ese acceso no autenticado — por eso,
+// con la arquitectura actual, estas reglas NO protegen de verdad los datos.
+//
+// Estas reglas documentan la INTENCIÓN y sirven para el SDK cliente (onSnapshot de la
+// confirmación). La protección real requiere la tarea de hardening pendiente:
+//   - Mover el acceso server a Firebase Admin SDK con service account (bypassa reglas), o
+//     a llamadas REST autenticadas con un token de servicio.
+//   - Recién entonces cerrar estas reglas a deny-by-default.
+//
+// Mientras tanto, la seguridad efectiva la dan los route handlers server-side
+// (verifyAdmin / requireAdminEmail) y que los secretos (tokens MP) viven en env vars,
+// nunca en la DB ni en el bundle.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Productos: lectura pública (catálogo), escritura solo desde el server.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Órdenes: el cliente de confirmación lee una orden puntual por id conocido
+    // (external_reference, autoID no adivinable). No se permite listar.
+    // La escritura es solo server-side.
+    match /orders/{orderId} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if false;
+
+      // Audit trail del webhook: solo server.
+      match /events/{eventId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Configuración (modo activo de MercadoPago, datos de transferencia): nunca desde el
+    // cliente. Los datos de transferencia se sirven al comprador vía un route server público.
+    match /settings/{docId} {
+      allow read, write: if false;
+    }
+
+    // Colecciones internas: solo server.
+    match /admin_invitations/{id} { allow read, write: if false; }
+    match /counters/{id}          { allow read, write: if false; }
+
+    // Default: denegar.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

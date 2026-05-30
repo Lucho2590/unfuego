@@ -7,6 +7,7 @@ import {
   Package,
   ShoppingBag,
   UserPlus,
+  Settings,
   ExternalLink,
   LogOut,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const links = [
   { href: "/admin/productos", label: "Productos", icon: Package },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/admin/invitar", label: "Invitar admins", icon: UserPlus },
+  { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
 
 export function AdminSidebar() {
