@@ -1,0 +1,3 @@
+# Archivos gitignored que Conductor copia desde la raíz del repo a cada workspace nuevo.
+# El contenido NO se commitea (sigue gitignored); acá solo listamos qué copiar.
+.env.local

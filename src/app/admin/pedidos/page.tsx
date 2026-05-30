@@ -26,7 +26,7 @@ export default async function AdminPedidosPage() {
   const orders = await getOrders();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-light">Pedidos</h1>
 
       <div className="rounded-lg border border-border bg-card">

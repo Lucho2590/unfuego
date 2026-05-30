@@ -87,7 +87,7 @@ export default function InvitarAdminsPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="space-y-8 max-w-2xl mx-auto">
       <div>
         <h1 className="text-2xl font-light">Invitar administradores</h1>
         <p className="text-sm text-muted-foreground mt-1">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store/cart";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,38 @@ import { Textarea } from "@/components/ui/textarea";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { toast } from "sonner";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
+
+type PaymentMethod = "mercadopago" | "transfer";
 
 export function CheckoutForm() {
   const router = useRouter();
   const items = useCartStore((s) => s.items);
-  const getSubtotal = useCartStore((s) => s.getSubtotal);
   const clearCart = useCartStore((s) => s.clearCart);
   const [loading, setLoading] = useState(false);
+
+  const [method, setMethod] = useState<PaymentMethod>("mercadopago");
+  const [transfer, setTransfer] = useState<{ enabled: boolean; discountPercent: number }>({
+    enabled: false,
+    discountPercent: 0,
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/transfer/settings");
+        if (res.ok) {
+          const data = await res.json();
+          setTransfer({
+            enabled: !!data.enabled,
+            discountPercent: Number(data.discountPercent) || 0,
+          });
+        }
+      } catch {
+        // si falla, queda solo MercadoPago
+      }
+    })();
+  }, []);
 
   const [form, setForm] = useState({
     name: "",
@@ -43,31 +68,36 @@ export function CheckoutForm() {
 
     setLoading(true);
 
+    const payload = {
+      customer: {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+      },
+      shipping: {
+        address: form.address,
+        city: form.city,
+        province: form.province,
+        postalCode: form.postalCode,
+        notes: form.notes || undefined,
+      },
+      items: items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+      })),
+    };
+
+    const useTransfer = method === "transfer" && transfer.enabled;
+    const endpoint = useTransfer ? "/api/checkout/transfer" : "/api/checkout";
+
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: {
-            name: form.name,
-            email: form.email,
-            phone: form.phone,
-          },
-          shipping: {
-            address: form.address,
-            city: form.city,
-            province: form.province,
-            postalCode: form.postalCode,
-            notes: form.notes || undefined,
-          },
-          items: items.map((item) => ({
-            productId: item.productId,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -76,8 +106,15 @@ export function CheckoutForm() {
         throw new Error(data.error || "Error al procesar el pedido");
       }
 
-      clearCart();
-      window.location.href = data.initPoint;
+      if (useTransfer) {
+        // La subida del comprobante puede ocurrir en otro dispositivo (link del email),
+        // así que limpiamos el carrito ya que la orden quedó creada.
+        clearCart();
+        router.push(`/checkout/transferencia?order=${data.orderId}`);
+      } else {
+        clearCart();
+        window.location.href = data.initPoint;
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Error al procesar el pedido"
@@ -232,7 +269,45 @@ export function CheckoutForm() {
             ))}
           </div>
 
-          <CartSummary />
+          <CartSummary
+            discountPercent={
+              method === "transfer" && transfer.enabled ? transfer.discountPercent : 0
+            }
+          />
+
+          {/* Método de pago (solo si la transferencia está habilitada) */}
+          {transfer.enabled && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Método de pago</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMethod("mercadopago")}
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm transition-colors",
+                    method === "mercadopago"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  MercadoPago
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod("transfer")}
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm transition-colors",
+                    method === "transfer"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Transferencia
+                  {transfer.discountPercent > 0 && ` (−${transfer.discountPercent}%)`}
+                </button>
+              </div>
+            </div>
+          )}
 
           <Button
             type="submit"
@@ -240,7 +315,11 @@ export function CheckoutForm() {
             size="lg"
             disabled={loading}
           >
-            {loading ? "Procesando..." : "Pagar con MercadoPago"}
+            {loading
+              ? "Procesando..."
+              : method === "transfer" && transfer.enabled
+                ? "Continuar con transferencia"
+                : "Pagar con MercadoPago"}
           </Button>
         </div>
       </div>

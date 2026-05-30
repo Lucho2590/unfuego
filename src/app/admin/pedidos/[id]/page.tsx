@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getOrderById } from "@/lib/firebase/orders";
 import { Badge } from "@/components/ui/badge";
 import { UpdateOrderStatus } from "@/components/admin/UpdateOrderStatus";
+import { ReviewTransfer } from "@/components/admin/ReviewTransfer";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function OrderDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-light">
           Pedido {order.orderNumber}
@@ -83,6 +84,12 @@ export default async function OrderDetailPage({ params }: Props) {
             <span className="text-muted-foreground">Subtotal</span>
             <span>${order.subtotal.toLocaleString("es-AR")}</span>
           </div>
+          {!!order.discount && order.discount > 0 && (
+            <div className="flex justify-between text-sm text-green-600">
+              <span>Descuento</span>
+              <span>−${order.discount.toLocaleString("es-AR")}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Envío</span>
             <span>${order.shippingCost.toLocaleString("es-AR")}</span>
@@ -103,6 +110,35 @@ export default async function OrderDetailPage({ params }: Props) {
             <p>Estado: {order.mercadopago.paymentStatus}</p>
           </div>
         </div>
+      )}
+
+      {/* Seguimiento del envío */}
+      {order.tracking?.number && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+          <h2 className="text-sm font-medium">Envío / seguimiento</h2>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>Guía: {order.tracking.number}</p>
+            {order.tracking.url && (
+              <a
+                href={order.tracking.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline break-all"
+              >
+                {order.tracking.url}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Revisión de transferencia */}
+      {order.paymentProvider === "transfer" && (
+        <ReviewTransfer
+          orderId={order.id}
+          paymentStatus={order.paymentStatus}
+          bankTransfer={order.bankTransfer}
+        />
       )}
 
       {/* Update status */}

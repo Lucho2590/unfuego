@@ -6,14 +6,15 @@ import {
 } from "firebase/storage";
 import { getFirebaseStorage } from "./config";
 
-export async function uploadImage(
-  file: File,
-  path: string
-): Promise<string> {
+/** Sube cualquier archivo (imagen, PDF, etc.) a Storage y devuelve su URL pública. */
+export async function uploadFile(file: File, path: string): Promise<string> {
   const storageRef = ref(getFirebaseStorage(), path);
   const snapshot = await uploadBytes(storageRef, file);
   return getDownloadURL(snapshot.ref);
 }
+
+/** Alias retrocompatible para subir imágenes. */
+export const uploadImage = uploadFile;
 
 export async function deleteImage(path: string): Promise<void> {
   const storageRef = ref(getFirebaseStorage(), path);
@@ -22,4 +23,8 @@ export async function deleteImage(path: string): Promise<void> {
 
 export function getProductImagePath(productId: string, fileName: string): string {
   return `products/${productId}/${fileName}`;
+}
+
+export function getTransferProofPath(orderId: string, fileName: string): string {
+  return `transfer-proofs/${orderId}/${fileName}`;
 }
