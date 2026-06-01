@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { ProductImageLightbox } from "./ProductImageLightbox";
 
 interface ProductImageGalleryProps {
   images: string[];
@@ -14,6 +15,7 @@ export function ProductImageGallery({
   productName,
 }: ProductImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (images.length === 0) {
     return (
@@ -25,7 +27,12 @@ export function ProductImageGallery({
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setLightboxOpen(true)}
+        className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden cursor-zoom-in"
+        aria-label={`Ampliar imagen de ${productName}`}
+      >
         <Image
           src={images[selectedIndex]}
           alt={`${productName} - imagen ${selectedIndex + 1}`}
@@ -34,7 +41,7 @@ export function ProductImageGallery({
           sizes="(max-width: 768px) 100vw, 50vw"
           priority
         />
-      </div>
+      </button>
 
       {images.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -60,6 +67,15 @@ export function ProductImageGallery({
           ))}
         </div>
       )}
+
+      <ProductImageLightbox
+        images={images}
+        productName={productName}
+        index={selectedIndex}
+        onIndexChange={setSelectedIndex}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+      />
     </div>
   );
 }

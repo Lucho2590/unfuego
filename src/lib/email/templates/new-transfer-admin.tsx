@@ -8,6 +8,7 @@ import {
   Hr,
 } from "@react-email/components";
 import type { Order } from "@/lib/types";
+import { formatCurrency, formatPhone } from "@/lib/utils";
 
 interface NewTransferAdminEmailProps {
   order: Order;
@@ -21,7 +22,7 @@ export function NewTransferAdminEmail({ order }: NewTransferAdminEmailProps) {
         <Container style={container}>
           <Section>
             <Text style={heading}>Nuevo pedido por transferencia #{order.orderNumber}</Text>
-            <Text style={totalText}>Total: ${order.total.toLocaleString("es-AR")}</Text>
+            <Text style={totalText}>Total: {formatCurrency(order.total)}</Text>
             <Text style={text}>
               El cliente debe transferir y subir el comprobante. Revisalo y confirmá el pago
               desde el panel.
@@ -37,7 +38,7 @@ export function NewTransferAdminEmail({ order }: NewTransferAdminEmailProps) {
               <br />
               {order.customer.email}
               <br />
-              {order.customer.phone}
+              {formatPhone(order.customer.phone)}
             </Text>
           </Section>
         </Container>

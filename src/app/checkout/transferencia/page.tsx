@@ -4,6 +4,7 @@ import { Landmark, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getOrderById } from "@/lib/firebase/orders";
 import { TransferTracker } from "@/components/checkout/TransferTracker";
+import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Tu pedido | Un Fuego",
@@ -46,7 +47,7 @@ export default async function TransferenciaPage({ searchParams }: Props) {
           <p className="text-muted-foreground text-sm">
             Total a transferir:{" "}
             <span className="font-semibold text-foreground">
-              ${order.total.toLocaleString("es-AR")}
+              {formatCurrency(order.total)}
             </span>
           </p>
         </div>

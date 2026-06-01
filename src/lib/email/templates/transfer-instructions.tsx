@@ -9,6 +9,7 @@ import {
   Button,
 } from "@react-email/components";
 import type { Order, TransferSettings } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 interface TransferInstructionsEmailProps {
   order: Order;
@@ -56,18 +57,18 @@ export function TransferInstructionsEmail({
 
           <Section>
             <Text style={summaryText}>
-              Subtotal: ${order.subtotal.toLocaleString("es-AR")}
+              Subtotal: {formatCurrency(order.subtotal)}
             </Text>
             {!!order.discount && order.discount > 0 && (
               <Text style={summaryText}>
-                Descuento: −${order.discount.toLocaleString("es-AR")}
+                Descuento: −{formatCurrency(order.discount)}
               </Text>
             )}
             <Text style={summaryText}>
-              Envío: ${order.shippingCost.toLocaleString("es-AR")}
+              Envío: {formatCurrency(order.shippingCost)}
             </Text>
             <Text style={totalText}>
-              Total a transferir: ${order.total.toLocaleString("es-AR")}
+              Total a transferir: {formatCurrency(order.total)}
             </Text>
           </Section>
 

@@ -10,6 +10,12 @@ async function verifyAdmin(): Promise<boolean> {
   return !!user;
 }
 
+function parseSortOrder(value: unknown): number | null {
+  return value === null || value === undefined || value === ""
+    ? null
+    : Number(value);
+}
+
 export async function POST(request: Request) {
   if (!(await verifyAdmin())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -18,27 +24,17 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const docId = await fsAdd("products", {
+    const docId = await fsAdd("sections", {
       name: body.name,
       slug: body.slug,
-      description: body.description,
-      shortDescription: body.shortDescription ?? "",
-      price: Number(body.price),
-      category: body.category ?? "",
-      stock: Number(body.stock),
+      sortOrder: parseSortOrder(body.sortOrder),
       isActive: body.isActive ?? true,
-      images: body.images ?? [],
-      sortOrder: body.sortOrder ?? null,
-      discountType: body.discountType ?? null,
-      discountValue:
-        body.discountValue == null ? null : Number(body.discountValue),
-      discountDescription: body.discountDescription ?? null,
     });
 
     return NextResponse.json({ id: docId });
   } catch (error) {
-    console.error("Create product error:", error);
-    return NextResponse.json({ error: "Error al crear producto" }, { status: 500 });
+    console.error("Create section error:", error);
+    return NextResponse.json({ error: "Error al crear sección" }, { status: 500 });
   }
 }
 
@@ -51,24 +47,15 @@ export async function PUT(request: Request) {
     const { id, ...data } = await request.json();
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
-    await fsUpdate("products", id, {
+    await fsUpdate("sections", id, {
       ...data,
-      price: Number(data.price),
-      stock: Number(data.stock),
-      sortOrder:
-        data.sortOrder === null || data.sortOrder === undefined
-          ? null
-          : Number(data.sortOrder),
-      discountType: data.discountType ?? null,
-      discountValue:
-        data.discountValue == null ? null : Number(data.discountValue),
-      discountDescription: data.discountDescription ?? null,
+      sortOrder: parseSortOrder(data.sortOrder),
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Update product error:", error);
-    return NextResponse.json({ error: "Error al actualizar producto" }, { status: 500 });
+    console.error("Update section error:", error);
+    return NextResponse.json({ error: "Error al actualizar sección" }, { status: 500 });
   }
 }
 
@@ -82,10 +69,10 @@ export async function DELETE(request: Request) {
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
-    await fsDelete("products", id);
+    await fsDelete("sections", id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete product error:", error);
-    return NextResponse.json({ error: "Error al eliminar producto" }, { status: 500 });
+    console.error("Delete section error:", error);
+    return NextResponse.json({ error: "Error al eliminar sección" }, { status: 500 });
   }
 }

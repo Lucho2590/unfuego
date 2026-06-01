@@ -3,6 +3,7 @@
 import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store/cart";
+import { getProductPrice } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
 interface AddToCartButtonProps {
@@ -25,7 +26,8 @@ export function AddToCartButton({
       productId: product.id,
       slug: product.slug,
       name: product.name,
-      price: product.price,
+      // Precio efectivo (con descuento si tiene): es lo que se cobra en el checkout.
+      price: getProductPrice(product).final,
       quantity,
       image: product.images?.[0] ?? "",
     });

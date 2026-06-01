@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCartStore } from "@/lib/store/cart";
+import { formatCurrency } from "@/lib/utils";
 import type { CartItem as CartItemType } from "@/lib/types";
 
 interface CartItemProps {
@@ -31,7 +32,7 @@ export function CartItem({ item }: CartItemProps) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{item.name}</p>
         <p className="text-sm text-muted-foreground">
-          ${item.price.toLocaleString("es-AR")}
+          {formatCurrency(item.price)}
         </p>
         <div className="flex items-center gap-2 mt-1">
           <button

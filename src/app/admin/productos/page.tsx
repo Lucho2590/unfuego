@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { getAllProducts } from "@/lib/firebase/products";
+import { getAllSections } from "@/lib/firebase/sections";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
-import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
+import { ProductRowActions } from "@/components/admin/ProductRowActions";
+import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminProductosPage() {
-  const products = await getAllProducts();
+  const [products, sections] = await Promise.all([
+    getAllProducts(),
+    getAllSections(),
+  ]);
+  const sectionName = new Map(sections.map((s) => [s.id, s.name]));
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -27,27 +33,36 @@ export default async function AdminProductosPage() {
           {products.map((product) => (
             <div
               key={product.id}
-              className="p-4 flex items-center justify-between"
+              className="relative p-4 flex items-center justify-between transition-colors hover:bg-muted/50"
             >
+              {/* Overlay que hace clickeable toda la fila hacia el detalle/edición */}
+              <Link
+                href={`/admin/productos/${product.id}`}
+                className="absolute inset-0"
+                aria-label={`Editar ${product.name}`}
+              />
               <div className="flex items-center gap-4">
                 <div>
                   <p className="text-sm font-medium">{product.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    /{product.slug} — Stock: {product.stock}
+                    /{product.slug} — Stock: {product.stock} — Orden:{" "}
+                    {product.sortOrder ?? "—"} — Sección:{" "}
+                    {sectionName.get(product.category) ?? "—"}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              {/* relative z-10 para quedar por encima del overlay y ser interactivo */}
+              <div className="relative z-10 flex items-center gap-3">
                 <Badge variant={product.isActive ? "default" : "secondary"}>
                   {product.isActive ? "Activo" : "Inactivo"}
                 </Badge>
                 <span className="text-sm font-medium">
-                  ${product.price.toLocaleString("es-AR")}
+                  {formatCurrency(product.price)}
                 </span>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/admin/productos/${product.id}`}>Editar</Link>
-                </Button>
-                <DeleteProductButton productId={product.id} productName={product.name} />
+                <ProductRowActions
+                  productId={product.id}
+                  productName={product.name}
+                />
               </div>
             </div>
           ))}

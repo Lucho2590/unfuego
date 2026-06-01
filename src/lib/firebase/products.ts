@@ -1,13 +1,23 @@
 import { fsGet, fsQuery } from "./admin";
 import type { Product } from "../types";
 
+// Orden de exposición: sortOrder ascendente (menor primero); los productos sin
+// sortOrder quedan al final, desempatados por createdAt descendente (más nuevo
+// primero, preservando el comportamiento previo). Se ordena en memoria para no
+// depender de índices compuestos ni perder docs sin el campo en el orderBy de Firestore.
+function bySortOrder(a: Product, b: Product): number {
+  const ao = a.sortOrder ?? Infinity;
+  const bo = b.sortOrder ?? Infinity;
+  if (ao !== bo) return ao - bo;
+  return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+}
+
 export async function getProducts(): Promise<Product[]> {
   const docs = await fsQuery(
     "products",
-    [{ field: "isActive", op: "EQUAL", value: true }],
-    { field: "createdAt", direction: "DESCENDING" }
+    [{ field: "isActive", op: "EQUAL", value: true }]
   );
-  return docs as unknown as Product[];
+  return (docs as unknown as Product[]).sort(bySortOrder);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -29,10 +39,6 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 export async function getAllProducts(): Promise<Product[]> {
-  const docs = await fsQuery(
-    "products",
-    undefined,
-    { field: "createdAt", direction: "DESCENDING" }
-  );
-  return docs as unknown as Product[];
+  const docs = await fsQuery("products");
+  return (docs as unknown as Product[]).sort(bySortOrder);
 }

@@ -7,6 +7,7 @@ import { TransferReceiptReceivedEmail } from "./templates/transfer-receipt-recei
 import { TransferRejectedEmail } from "./templates/transfer-rejected";
 import { OrderShippedEmail } from "./templates/order-shipped";
 import type { Order, TransferSettings } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 const FROM_EMAIL = process.env.EMAIL_FROM ?? "Un Fuego <pedidos@unfuegomdq.com.ar>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -28,7 +29,7 @@ export async function sendAdminNotification(order: Order) {
   await resend.emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
-    subject: `Nuevo pedido ${order.orderNumber} - $${order.total.toLocaleString("es-AR")}`,
+    subject: `Nuevo pedido ${order.orderNumber} - ${formatCurrency(order.total)}`,
     react: NewOrderAdminEmail({ order }),
   });
 }
@@ -58,7 +59,7 @@ export async function sendTransferAdminNotification(order: Order) {
   await resend.emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
-    subject: `Nuevo pedido por transferencia ${order.orderNumber} - $${order.total.toLocaleString("es-AR")}`,
+    subject: `Nuevo pedido por transferencia ${order.orderNumber} - ${formatCurrency(order.total)}`,
     react: NewTransferAdminEmail({ order }),
   });
 }

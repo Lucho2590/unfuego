@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import type { Product } from "@/lib/types";
+import { formatCurrency, getProductPrice } from "@/lib/utils";
 import { ProductImageGallery } from "./ProductImageGallery";
 import { AddToCartButton } from "./AddToCartButton";
 
@@ -12,6 +13,7 @@ interface ProductDetailProps {
 
 export function ProductDetail({ product }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
+  const priceInfo = getProductPrice(product);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
@@ -25,9 +27,23 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <h1 className="text-2xl md:text-3xl font-light tracking-tight">
             {product.name}
           </h1>
-          <p className="text-2xl font-semibold mt-2">
-            ${product.price.toLocaleString("es-AR")}
-          </p>
+          {priceInfo.hasDiscount ? (
+            <div className="mt-2 space-y-0.5">
+              <p className="text-base text-muted-foreground line-through">
+                {formatCurrency(priceInfo.original)}
+              </p>
+              <p className="text-2xl font-semibold text-primary">
+                {formatCurrency(priceInfo.final)}
+              </p>
+              {priceInfo.description && (
+                <p className="text-sm text-primary/90">{priceInfo.description}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-2xl font-semibold mt-2">
+              {formatCurrency(product.price)}
+            </p>
+          )}
         </div>
 
         <p className="text-muted-foreground leading-relaxed">

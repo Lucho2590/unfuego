@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { toast } from "sonner";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency, formatPhone } from "@/lib/utils";
 
 type PaymentMethod = "mercadopago" | "transfer";
 
@@ -178,10 +178,15 @@ export function CheckoutForm() {
               <Label htmlFor="phone">Teléfono</Label>
               <Input
                 id="phone"
-                value={form.phone}
-                onChange={(e) => updateField("phone", e.target.value)}
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={formatPhone(form.phone)}
+                onChange={(e) =>
+                  updateField("phone", e.target.value.replace(/[^\d+]/g, ""))
+                }
                 required
-                placeholder="+54 223 ..."
+                placeholder="+54 223 512-3456"
               />
             </div>
           </div>
@@ -271,7 +276,7 @@ export function CheckoutForm() {
                   </p>
                 </div>
                 <p className="text-sm font-medium">
-                  ${(item.price * item.quantity).toLocaleString("es-AR")}
+                  {formatCurrency(item.price * item.quantity)}
                 </p>
               </div>
             ))}
