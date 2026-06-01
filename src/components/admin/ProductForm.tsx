@@ -6,15 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ImageUploader } from "./ImageUploader";
+import {
+  slugify,
+  formatThousands,
+  onlyDigits,
+  formatCurrency,
+  getProductPrice,
+} from "@/lib/utils";
 import { toast } from "sonner";
-import type { Product } from "@/lib/types";
+import type { Product, Section } from "@/lib/types";
+
+// Valor centinela para "Sin sección" (radix Select no permite item con value="").
+const NO_SECTION = "__none__";
+// Idem para "Sin descuento".
+const NO_DISCOUNT = "__none__";
 
 interface ProductFormProps {
   product?: Product;
+  sections?: Section[];
 }
 
-export function ProductForm({ product }: ProductFormProps) {
+export function ProductForm({ product, sections = [] }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const isEditing = !!product;
@@ -27,6 +47,10 @@ export function ProductForm({ product }: ProductFormProps) {
     price: product?.price?.toString() ?? "",
     category: product?.category ?? "",
     stock: product?.stock?.toString() ?? "0",
+    sortOrder: product?.sortOrder?.toString() ?? "",
+    discountType: product?.discountType ?? "", // "" | "percentage" | "fixed"
+    discountValue: product?.discountValue?.toString() ?? "",
+    discountDescription: product?.discountDescription ?? "",
     isActive: product?.isActive ?? true,
     images: product?.images ?? [],
   });
@@ -35,20 +59,10 @@ export function ProductForm({ product }: ProductFormProps) {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Auto-generate slug from name
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  };
-
   const handleNameChange = (name: string) => {
     updateField("name", name);
     if (!isEditing) {
-      updateField("slug", generateSlug(name));
+      updateField("slug", slugify(name));
     }
   };
 
@@ -57,10 +71,17 @@ export function ProductForm({ product }: ProductFormProps) {
     setLoading(true);
 
     try {
+      const hasDiscount = form.discountType !== "" && form.discountValue !== "";
       const body = {
         ...form,
         price: Number(form.price),
         stock: Number(form.stock),
+        sortOrder: form.sortOrder === "" ? null : Number(form.sortOrder),
+        discountType: hasDiscount ? form.discountType : null,
+        discountValue: hasDiscount ? Number(form.discountValue) : null,
+        discountDescription: hasDiscount
+          ? form.discountDescription.trim() || null
+          : null,
         ...(isEditing ? { id: product.id } : {}),
       };
 
@@ -136,15 +157,21 @@ export function ProductForm({ product }: ProductFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="price">Precio (ARS)</Label>
-          <Input
-            id="price"
-            type="number"
-            min="0"
-            value={form.price}
-            onChange={(e) => updateField("price", e.target.value)}
-            required
-            placeholder="25000"
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+              $
+            </span>
+            <Input
+              id="price"
+              type="text"
+              inputMode="numeric"
+              className="pl-7"
+              value={formatThousands(form.price)}
+              onChange={(e) => updateField("price", onlyDigits(e.target.value))}
+              required
+              placeholder="25.000"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -160,12 +187,36 @@ export function ProductForm({ product }: ProductFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="category">Categoría</Label>
+          <Label htmlFor="category">Sección</Label>
+          <Select
+            value={form.category === "" ? NO_SECTION : form.category}
+            onValueChange={(value) =>
+              updateField("category", value === NO_SECTION ? "" : value)
+            }
+          >
+            <SelectTrigger id="category" className="w-full">
+              <SelectValue placeholder="Sin sección" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_SECTION}>Sin sección</SelectItem>
+              {sections.map((section) => (
+                <SelectItem key={section.id} value={section.id}>
+                  {section.name}
+                  {!section.isActive ? " (inactiva)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="sortOrder">Orden</Label>
           <Input
-            id="category"
-            value={form.category}
-            onChange={(e) => updateField("category", e.target.value)}
-            placeholder="parrillas"
+            id="sortOrder"
+            type="number"
+            value={form.sortOrder}
+            onChange={(e) => updateField("sortOrder", e.target.value)}
+            placeholder="Menor aparece primero"
           />
         </div>
 
@@ -179,6 +230,90 @@ export function ProductForm({ product }: ProductFormProps) {
           />
           <Label htmlFor="isActive">Activo (visible en tienda)</Label>
         </div>
+      </div>
+
+      {/* Descuento manual (% o monto fijo) */}
+      <div className="space-y-3 rounded-lg border border-border p-4">
+        <p className="text-sm font-medium">Descuento</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="discountType">Tipo</Label>
+            <Select
+              value={
+                form.discountType === "" ? NO_DISCOUNT : form.discountType
+              }
+              onValueChange={(value) =>
+                updateField(
+                  "discountType",
+                  value === NO_DISCOUNT ? "" : value
+                )
+              }
+            >
+              <SelectTrigger id="discountType" className="w-full">
+                <SelectValue placeholder="Sin descuento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_DISCOUNT}>Sin descuento</SelectItem>
+                <SelectItem value="percentage">Porcentaje (%)</SelectItem>
+                <SelectItem value="fixed">Monto fijo ($)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="discountValue">Valor</Label>
+            <Input
+              id="discountValue"
+              type="text"
+              inputMode="numeric"
+              value={
+                form.discountType === "percentage"
+                  ? form.discountValue
+                  : formatThousands(form.discountValue)
+              }
+              onChange={(e) =>
+                updateField("discountValue", onlyDigits(e.target.value))
+              }
+              disabled={form.discountType === ""}
+              placeholder={
+                form.discountType === "percentage" ? "20" : "5.000"
+              }
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="discountDescription">Descripción del descuento</Label>
+          <Input
+            id="discountDescription"
+            value={form.discountDescription}
+            onChange={(e) =>
+              updateField("discountDescription", e.target.value)
+            }
+            disabled={form.discountType === ""}
+            placeholder="Por día del padre"
+          />
+        </div>
+
+        {form.discountType !== "" &&
+          form.discountValue !== "" &&
+          form.price !== "" && (
+            <p className="text-xs text-muted-foreground">
+              Precio final:{" "}
+              <span className="font-medium text-foreground">
+                {formatCurrency(
+                  getProductPrice({
+                    price: Number(form.price),
+                    discountType: form.discountType as "percentage" | "fixed",
+                    discountValue: Number(form.discountValue),
+                  }).final
+                )}
+              </span>{" "}
+              <span className="line-through">
+                {formatCurrency(Number(form.price))}
+              </span>
+            </p>
+          )}
       </div>
 
       <div className="space-y-2">

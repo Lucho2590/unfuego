@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardStats } from "./DashboardStats";
 import { BarChart3, ShoppingCart, Eye, TrendingUp } from "lucide-react";
 import type { Order, Product } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 interface ProductView {
   id: string;
@@ -82,7 +83,7 @@ export function DashboardTabs({
             <div className="rounded-lg border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">Ticket promedio</p>
               <p className="text-2xl font-semibold mt-1">
-                ${avgOrderValue.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
+                {formatCurrency(avgOrderValue)}
               </p>
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
@@ -93,7 +94,7 @@ export function DashboardTabs({
               <p className="text-sm text-muted-foreground">Carritos abandonados</p>
               <p className="text-2xl font-semibold mt-1">{abandonedCarts.length}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                ${abandonedValue.toLocaleString("es-AR")} en ventas perdidas
+                {formatCurrency(abandonedValue)} en ventas perdidas
               </p>
             </div>
           </div>
@@ -163,7 +164,7 @@ export function DashboardTabs({
                           </p>
                         </div>
                         <span className="text-sm font-medium">
-                          ${cart.total?.toLocaleString("es-AR")}
+                          {formatCurrency(cart.total)}
                         </span>
                       </div>
                     </div>
@@ -189,7 +190,7 @@ export function DashboardTabs({
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">
-                      ${order.total.toLocaleString("es-AR")}
+                      {formatCurrency(order.total)}
                     </p>
                     <p className="text-xs text-muted-foreground capitalize">
                       {order.status}

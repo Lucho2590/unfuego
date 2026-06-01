@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getProducts } from "@/lib/firebase/products";
-import { ProductGrid } from "@/components/tienda/ProductGrid";
+import { getSections } from "@/lib/firebase/sections";
+import { TiendaCatalog } from "@/components/tienda/TiendaCatalog";
 
 export const metadata: Metadata = {
   title: "Tienda | Un Fuego",
@@ -11,7 +12,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function TiendaPage() {
-  const products = await getProducts();
+  const [products, sections] = await Promise.all([
+    getProducts(),
+    getSections(),
+  ]);
 
   return (
     <div className="pt-24 pb-16 px-[var(--section-padding-x)]">
@@ -25,7 +29,7 @@ export default async function TiendaPage() {
           </p>
         </div>
 
-        <ProductGrid products={products} />
+        <TiendaCatalog products={products} sections={sections} />
       </div>
     </div>
   );

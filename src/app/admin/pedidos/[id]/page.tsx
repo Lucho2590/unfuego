@@ -3,6 +3,7 @@ import { getOrderById } from "@/lib/firebase/orders";
 import { Badge } from "@/components/ui/badge";
 import { UpdateOrderStatus } from "@/components/admin/UpdateOrderStatus";
 import { ReviewTransfer } from "@/components/admin/ReviewTransfer";
+import { formatCurrency, formatPhone, telHref } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +42,16 @@ export default async function OrderDetailPage({ params }: Props) {
         <h2 className="text-sm font-medium">Cliente</h2>
         <div className="text-sm text-muted-foreground space-y-1">
           <p>{order.customer.name}</p>
-          <p>{order.customer.email}</p>
-          <p>{order.customer.phone}</p>
+          <p>
+            <a href={`mailto:${order.customer.email}`} className="hover:underline">
+              {order.customer.email}
+            </a>
+          </p>
+          <p>
+            <a href={telHref(order.customer.phone)} className="hover:underline">
+              {formatPhone(order.customer.phone)}
+            </a>
+          </p>
         </div>
       </div>
 
@@ -70,11 +79,11 @@ export default async function OrderDetailPage({ params }: Props) {
               <div>
                 <p className="text-sm">{item.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  x{item.quantity} — ${item.price.toLocaleString("es-AR")} c/u
+                  x{item.quantity} — {formatCurrency(item.price)} c/u
                 </p>
               </div>
               <p className="text-sm font-medium">
-                ${(item.price * item.quantity).toLocaleString("es-AR")}
+                {formatCurrency(item.price * item.quantity)}
               </p>
             </div>
           ))}
@@ -82,21 +91,21 @@ export default async function OrderDetailPage({ params }: Props) {
         <div className="p-4 border-t border-border space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>${order.subtotal.toLocaleString("es-AR")}</span>
+            <span>{formatCurrency(order.subtotal)}</span>
           </div>
           {!!order.discount && order.discount > 0 && (
             <div className="flex justify-between text-sm text-green-600">
               <span>Descuento</span>
-              <span>−${order.discount.toLocaleString("es-AR")}</span>
+              <span>−{formatCurrency(order.discount)}</span>
             </div>
           )}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Envío</span>
-            <span>${order.shippingCost.toLocaleString("es-AR")}</span>
+            <span>{formatCurrency(order.shippingCost)}</span>
           </div>
           <div className="flex justify-between text-sm font-medium pt-1 border-t border-border">
             <span>Total</span>
-            <span>${order.total.toLocaleString("es-AR")}</span>
+            <span>{formatCurrency(order.total)}</span>
           </div>
         </div>
       </div>

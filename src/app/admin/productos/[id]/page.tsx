@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/firebase/products";
+import { getAllSections } from "@/lib/firebase/sections";
 import { ProductForm } from "@/components/admin/ProductForm";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,10 @@ interface Props {
 
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
-  const product = await getProductById(id);
+  const [product, sections] = await Promise.all([
+    getProductById(id),
+    getAllSections(),
+  ]);
 
   if (!product) {
     notFound();
@@ -19,7 +23,7 @@ export default async function EditProductPage({ params }: Props) {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-light">Editar producto</h1>
-      <ProductForm product={product} />
+      <ProductForm product={product} sections={sections} />
     </div>
   );
 }

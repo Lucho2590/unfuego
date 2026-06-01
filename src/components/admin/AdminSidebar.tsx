@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
+  Tags,
   ShoppingBag,
   UserPlus,
   CreditCard,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/productos", label: "Productos", icon: Package },
+  { href: "/admin/secciones", label: "Secciones", icon: Tags },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/admin/invitar", label: "Invitar admins", icon: UserPlus },
   { href: "/admin/configuracion-de-pagos", label: "Configuración de pagos", icon: CreditCard },

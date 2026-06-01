@@ -1,6 +1,7 @@
 import { getOrders } from "@/lib/firebase/orders";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export default async function AdminPedidosPage() {
                   {statusLabels[order.status] ?? order.status}
                 </Badge>
                 <span className="text-sm font-medium">
-                  ${order.total.toLocaleString("es-AR")}
+                  {formatCurrency(order.total)}
                 </span>
               </div>
             </Link>

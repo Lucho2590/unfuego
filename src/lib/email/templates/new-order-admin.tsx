@@ -8,6 +8,7 @@ import {
   Hr,
 } from "@react-email/components";
 import type { Order } from "@/lib/types";
+import { formatCurrency, formatPhone } from "@/lib/utils";
 
 interface NewOrderAdminEmailProps {
   order: Order;
@@ -24,7 +25,7 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
               Nuevo pedido #{order.orderNumber}
             </Text>
             <Text style={totalText}>
-              Total: ${order.total.toLocaleString("es-AR")}
+              Total: {formatCurrency(order.total)}
             </Text>
           </Section>
 
@@ -37,7 +38,7 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
               <br />
               {order.customer.email}
               <br />
-              {order.customer.phone}
+              {formatPhone(order.customer.phone)}
             </Text>
           </Section>
 
@@ -47,8 +48,8 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
             <Text style={subheading}>Productos</Text>
             {order.items.map((item, i) => (
               <Text key={i} style={text}>
-                {item.name} x{item.quantity} — $
-                {(item.price * item.quantity).toLocaleString("es-AR")}
+                {item.name} x{item.quantity} —{" "}
+                {formatCurrency(item.price * item.quantity)}
               </Text>
             ))}
           </Section>
@@ -73,13 +74,13 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
 
           <Section>
             <Text style={summaryText}>
-              Subtotal: ${order.subtotal.toLocaleString("es-AR")}
+              Subtotal: {formatCurrency(order.subtotal)}
             </Text>
             <Text style={summaryText}>
-              Envío: ${order.shippingCost.toLocaleString("es-AR")}
+              Envío: {formatCurrency(order.shippingCost)}
             </Text>
             <Text style={totalText}>
-              Total: ${order.total.toLocaleString("es-AR")}
+              Total: {formatCurrency(order.total)}
             </Text>
           </Section>
         </Container>

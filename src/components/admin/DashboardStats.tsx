@@ -1,5 +1,6 @@
 import { Package, ShoppingBag, DollarSign, TrendingUp } from "lucide-react";
 import type { Order, Product } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 interface DashboardStatsProps {
   orders: Order[];
@@ -24,7 +25,7 @@ export function DashboardStats({ orders, products }: DashboardStatsProps) {
     },
     {
       label: "Ingresos",
-      value: `$${totalRevenue.toLocaleString("es-AR")}`,
+      value: formatCurrency(totalRevenue),
       icon: DollarSign,
     },
     {

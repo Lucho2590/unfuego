@@ -10,6 +10,22 @@ export interface Product {
   stock: number;
   isActive: boolean;
   weight?: number;
+  sortOrder?: number; // menor = aparece primero; sin valor = al final
+  discountType?: DiscountType | null; // tipo de descuento manual; null = sin descuento
+  discountValue?: number | null; // % (0-100) o monto en $ según discountType
+  discountDescription?: string | null; // ej. "Por día del padre"
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DiscountType = "percentage" | "fixed";
+
+export interface Section {
+  id: string;
+  name: string;
+  slug: string; // autogenerado del nombre; útil para filtros por URL a futuro
+  sortOrder?: number; // menor primero (mismo criterio que productos)
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }

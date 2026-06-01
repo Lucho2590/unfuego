@@ -1,6 +1,7 @@
 "use client";
 
 import { useCartStore } from "@/lib/store/cart";
+import { formatCurrency } from "@/lib/utils";
 
 const SHIPPING_COST = Number(process.env.NEXT_PUBLIC_SHIPPING_COST ?? 0);
 
@@ -18,17 +19,17 @@ export function CartSummary({ discountPercent = 0 }: CartSummaryProps) {
     <div className="space-y-2 pt-3 border-t border-border">
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">Subtotal</span>
-        <span>${subtotal.toLocaleString("es-AR")}</span>
+        <span>{formatCurrency(subtotal)}</span>
       </div>
       {discount > 0 && (
         <div className="flex justify-between text-sm text-green-600">
           <span>Descuento transferencia ({discountPercent}%)</span>
-          <span>−${discount.toLocaleString("es-AR")}</span>
+          <span>−{formatCurrency(discount)}</span>
         </div>
       )}
       <div className="flex justify-between text-sm font-medium pt-2 border-t border-border">
         <span>Total</span>
-        <span>${total.toLocaleString("es-AR")}</span>
+        <span>{formatCurrency(total)}</span>
       </div>
     </div>
   );
