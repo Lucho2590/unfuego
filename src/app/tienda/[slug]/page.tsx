@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProductBySlug } from "@/lib/firebase/products";
+import { getProductBySlug, getProducts } from "@/lib/firebase/products";
 import { ProductDetail } from "@/components/tienda/ProductDetail";
 import { ProductViewTracker } from "@/components/tienda/ProductViewTracker";
 import { Footer } from "@/components/layout/Footer";
@@ -28,7 +28,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
+
+// Pre-renderiza las fichas de productos activos. dynamicParams queda en su
+// default (true): un producto nuevo aún no listado se sirve on-demand igual.
+export async function generateStaticParams() {
+  const products = await getProducts();
+  return products.map((product) => ({ slug: product.slug }));
+}
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;

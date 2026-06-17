@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { revalidateTag } from "next/cache";
 import { verifySession, fsAdd, fsUpdate, fsDelete } from "@/lib/firebase/admin";
 
 async function verifyAdmin(): Promise<boolean> {
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
       discountDescription: body.discountDescription ?? null,
     });
 
+    revalidateTag("products", "max");
     return NextResponse.json({ id: docId });
   } catch (error) {
     console.error("Create product error:", error);
@@ -65,6 +67,7 @@ export async function PUT(request: Request) {
       discountDescription: data.discountDescription ?? null,
     });
 
+    revalidateTag("products", "max");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Update product error:", error);
@@ -83,6 +86,7 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
     await fsDelete("products", id);
+    revalidateTag("products", "max");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete product error:", error);

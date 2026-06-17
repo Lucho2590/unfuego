@@ -16,19 +16,13 @@ export function ProductCard({ product }: ProductCardProps) {
     <div className="group flex h-full flex-col rounded-lg border border-border/50 bg-card overflow-hidden transition-colors hover:border-border">
       <Link href={`/tienda/${product.slug}`} className="block">
         <div className="relative aspect-square bg-muted overflow-hidden">
-          {mainImage ? (
-            <Image
-              src={mainImage}
-              alt={product.name}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <span className="text-4xl">🔥</span>
-            </div>
-          )}
+          <Image
+            src={mainImage || "/images/placeholder.jpg"}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
         </div>
       </Link>
 

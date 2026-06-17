@@ -17,17 +17,13 @@ export function CartItem({ item }: CartItemProps) {
   return (
     <div className="flex gap-3 py-3">
       <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
-        {item.image ? (
-          <Image
-            src={item.image}
-            alt={item.name}
-            fill
-            className="object-cover"
-            sizes="64px"
-          />
-        ) : (
-          <div className="w-full h-full bg-muted" />
-        )}
+        <Image
+          src={item.image || "/images/placeholder.jpg"}
+          alt={item.name}
+          fill
+          className="object-cover"
+          sizes="64px"
+        />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{item.name}</p>
