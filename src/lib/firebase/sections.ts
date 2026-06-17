@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { fsGet, fsQuery } from "./admin";
 import type { Section } from "../types";
 
@@ -11,14 +12,19 @@ function bySortOrder(a: Section, b: Section): number {
   return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
 }
 
-/** Secciones activas, ordenadas (tienda y selector de producto). */
-export async function getSections(): Promise<Section[]> {
-  const docs = await fsQuery(
-    "sections",
-    [{ field: "isActive", op: "EQUAL", value: true }]
-  );
-  return (docs as unknown as Section[]).sort(bySortOrder);
-}
+/** Secciones activas, ordenadas (tienda y selector de producto). Cacheadas en el
+ * Data Cache de Next, etiquetadas con "sections" para invalidarlas desde el admin. */
+export const getSections = unstable_cache(
+  async (): Promise<Section[]> => {
+    const docs = await fsQuery(
+      "sections",
+      [{ field: "isActive", op: "EQUAL", value: true }]
+    );
+    return (docs as unknown as Section[]).sort(bySortOrder);
+  },
+  ["sections-active"],
+  { tags: ["sections"], revalidate: 3600 }
+);
 
 /** Todas las secciones, ordenadas (admin). */
 export async function getAllSections(): Promise<Section[]> {

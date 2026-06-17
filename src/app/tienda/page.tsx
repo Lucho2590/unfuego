@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "Productos de cocina outdoor pensados para acompañarte en cualquier lugar.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function TiendaPage() {
   const [products, sections] = await Promise.all([

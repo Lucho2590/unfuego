@@ -19,8 +19,15 @@ export function ProductImageGallery({
 
   if (images.length === 0) {
     return (
-      <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-        <span className="text-6xl">🔥</span>
+      <div className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden">
+        <Image
+          src="/images/placeholder.jpg"
+          alt={productName}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 50vw"
+          priority
+        />
       </div>
     );
   }

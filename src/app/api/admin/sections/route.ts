@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { revalidateTag } from "next/cache";
 import { verifySession, fsAdd, fsUpdate, fsDelete } from "@/lib/firebase/admin";
 
 async function verifyAdmin(): Promise<boolean> {
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       isActive: body.isActive ?? true,
     });
 
+    revalidateTag("sections", "max");
     return NextResponse.json({ id: docId });
   } catch (error) {
     console.error("Create section error:", error);
@@ -52,6 +54,7 @@ export async function PUT(request: Request) {
       sortOrder: parseSortOrder(data.sortOrder),
     });
 
+    revalidateTag("sections", "max");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Update section error:", error);
@@ -70,6 +73,7 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
     await fsDelete("sections", id);
+    revalidateTag("sections", "max");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete section error:", error);
