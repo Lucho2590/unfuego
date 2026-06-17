@@ -12,9 +12,13 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  ChevronDown,
+  Link2,
+  Unlink,
 } from "lucide-react";
 
 type Mode = "test" | "production";
+type OAuthStatus = "disconnected" | "pending" | "connected" | "error";
 
 interface ModeInfo {
   configured: boolean;
@@ -23,11 +27,21 @@ interface ModeInfo {
   hasWebhookSecret: boolean;
 }
 
+interface OAuthInfo {
+  status: OAuthStatus;
+  email?: string;
+  nickname?: string;
+  liveMode?: boolean;
+  connectedAt?: string;
+  lastError?: string;
+}
+
 interface SettingsUI {
   activeMode: Mode;
   enabled: boolean;
   test: ModeInfo;
   production: ModeInfo;
+  oauth: OAuthInfo;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -43,6 +57,9 @@ export function MercadoPagoConfig() {
   const [saving, setSaving] = useState(false);
   const [savingEnabled, setSavingEnabled] = useState(false);
   const [savingMode, setSavingMode] = useState<Mode | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [drafts, setDrafts] = useState<Record<Mode, DraftCreds>>({
     test: { ...EMPTY_DRAFT },
     production: { ...EMPTY_DRAFT },
@@ -71,6 +88,35 @@ export function MercadoPagoConfig() {
 
   const updateDraft = (mode: Mode, key: keyof DraftCreds, value: string) => {
     setDrafts((prev) => ({ ...prev, [mode]: { ...prev[mode], [key]: value } }));
+  };
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch("/api/integrations/mercadopago/connect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "No se pudo iniciar la conexión");
+      // Redirige al consentimiento de MercadoPago. Vuelve al callback con ?result.
+      window.location.href = data.url;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo iniciar la conexión");
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/integrations/mercadopago/disconnect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo desconectar");
+      await fetchSettings();
+      toast.success("MercadoPago desconectado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo desconectar");
+    } finally {
+      setDisconnecting(false);
+    }
   };
 
   const handleToggleEnabled = async () => {
@@ -157,18 +203,12 @@ export function MercadoPagoConfig() {
     );
   }
 
-  const active = settings?.activeMode;
-  const activeConfigured =
-    active === "production" ? settings?.production.configured : settings?.test.configured;
+  const oauth = settings?.oauth;
+  const isConnected = oauth?.status === "connected";
 
   return (
     <div className="space-y-8">
-      <p className="text-sm text-muted-foreground">
-        Cargá las credenciales de MercadoPago acá (se guardan encriptadas en la base) o usalas
-        como variables de entorno. El token nunca se muestra completo.
-      </p>
-
-      {/* Habilitar / deshabilitar como método de pago */}
+      {/* Encabezado + habilitar/deshabilitar */}
       <div className="flex items-center gap-3">
         <CreditCard className="w-5 h-5 text-muted-foreground" />
         <h2 className="text-lg font-light">MercadoPago</h2>
@@ -195,103 +235,65 @@ export function MercadoPagoConfig() {
         </span>
       </div>
 
-      {/* Estado del modo activo */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm">Estado:</span>
-        {!activeConfigured ? (
-          <Badge variant="outline" className="text-yellow-600 border-yellow-600/40">
-            Sin configurar
-          </Badge>
-        ) : (
-          <Badge variant={active === "production" ? "default" : "outline"}>
-            {active === "production" ? "Activo en Producción" : "Activo en Pruebas"}
-          </Badge>
-        )}
-      </div>
-
-      {/* Toggle de modo */}
-      <div className="space-y-3">
-        <p className="text-sm font-medium">Modo activo</p>
-        <div className="flex gap-3">
-          {(["test", "production"] as Mode[]).map((mode) => {
-            const info = mode === "production" ? settings?.production : settings?.test;
-            const isActive = active === mode;
-            return (
-              <Button
-                key={mode}
-                variant={isActive ? "default" : "outline"}
-                disabled={saving || !info?.configured}
-                onClick={() => handleSetMode(mode)}
-                className="flex-1"
-              >
-                {MODE_LABEL[mode]}
-              </Button>
-            );
-          })}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          No se puede activar un modo sin sus credenciales configuradas.
-        </p>
-      </div>
-
-      {/* Credenciales por modo */}
-      <div className="space-y-4">
-        {(["test", "production"] as Mode[]).map((mode) => {
-          const info = mode === "production" ? settings?.production : settings?.test;
-          const draft = drafts[mode];
-          return (
-            <div key={mode} className="rounded-lg border border-border bg-card p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">{MODE_LABEL[mode]}</h3>
-                {info?.configured ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {info.source === "env" ? "Variable de entorno" : "Cargado en la app"}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs text-yellow-600">
-                    <AlertCircle className="w-3.5 h-3.5" /> No configurado
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={`token-${mode}`}>Access token</Label>
-                <Input
-                  id={`token-${mode}`}
-                  type="password"
-                  autoComplete="off"
-                  value={draft.accessToken}
-                  onChange={(e) => updateDraft(mode, "accessToken", e.target.value)}
-                  placeholder={info?.tokenMasked ?? "APP_USR-..."}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={`secret-${mode}`}>Webhook secret</Label>
-                <Input
-                  id={`secret-${mode}`}
-                  type="password"
-                  autoComplete="off"
-                  value={draft.webhookSecret}
-                  onChange={(e) => updateDraft(mode, "webhookSecret", e.target.value)}
-                  placeholder={info?.hasWebhookSecret ? "•••• (configurado)" : "Webhook secret"}
-                />
-              </div>
-
-              <Button
-                size="sm"
-                onClick={() => handleSaveCredentials(mode)}
-                disabled={
-                  savingMode === mode ||
-                  (!draft.accessToken.trim() && !draft.webhookSecret.trim())
-                }
-              >
-                {savingMode === mode ? "Guardando..." : "Guardar credenciales"}
-              </Button>
+      {/* Conexión OAuth (método principal) */}
+      <div className="rounded-lg border border-border bg-card p-5 space-y-4">
+        {isConnected ? (
+          <>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <span className="text-sm font-medium">Cuenta conectada</span>
+              <Badge variant={oauth?.liveMode ? "default" : "outline"}>
+                {oauth?.liveMode ? "Producción" : "Pruebas"}
+              </Badge>
             </div>
-          );
-        })}
+            <p className="text-sm text-muted-foreground">
+              Conectado como{" "}
+              <span className="font-medium text-foreground">
+                {oauth?.email ?? oauth?.nickname ?? "cuenta de MercadoPago"}
+              </span>
+              {oauth?.nickname && oauth?.email ? ` (${oauth.nickname})` : ""}
+            </p>
+            {oauth?.connectedAt && (
+              <p className="text-xs text-muted-foreground">
+                Desde {new Date(oauth.connectedAt).toLocaleString("es-AR")}
+              </p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
+              <Unlink className="w-4 h-4" />
+              {disconnecting ? "Desconectando..." : "Desconectar"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium">Conectá tu cuenta de MercadoPago</span>
+              {oauth?.status === "error" && (
+                <Badge variant="outline" className="text-red-600 border-red-600/40">
+                  Error
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Autorizá la conexión en MercadoPago una sola vez. No hace falta copiar ni pegar
+              tokens: se guardan de forma segura y se renuevan automáticamente.
+            </p>
+            {oauth?.status === "error" && oauth.lastError && (
+              <p className="text-xs text-red-600">
+                Último error: {oauth.lastError}. Probá conectar de nuevo.
+              </p>
+            )}
+            <Button onClick={handleConnect} disabled={connecting}>
+              <CreditCard className="w-4 h-4" />
+              {connecting ? "Redirigiendo..." : "Conectar con MercadoPago"}
+            </Button>
+          </>
+        )}
       </div>
 
       {/* URL del webhook */}
@@ -308,8 +310,124 @@ export function MercadoPagoConfig() {
         <p className="text-xs text-muted-foreground">
           Registrá esta URL en el panel de desarrolladores de MercadoPago suscribiendo el
           evento <code>payment</code>. El secret resultante va en el campo &quot;Webhook
-          secret&quot; de cada modo.
+          secret&quot; de la configuración avanzada.
         </p>
+      </div>
+
+      {/* Configuración avanzada / fallback: token manual por modo */}
+      <div className="border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
+          />
+          Configuración avanzada (token manual / fallback)
+        </button>
+
+        {showAdvanced && (
+          <div className="space-y-6 pt-4">
+            <p className="text-xs text-muted-foreground">
+              Alternativa para casos especiales: cargá un access token a mano (se guarda
+              encriptado) o usá variables de entorno. Si la cuenta está conectada por OAuth, se usa
+              esa conexión y este token queda solo como respaldo.
+            </p>
+
+            {/* Toggle de modo */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Modo activo (fallback)</p>
+              <div className="flex gap-3">
+                {(["test", "production"] as Mode[]).map((mode) => {
+                  const info = mode === "production" ? settings?.production : settings?.test;
+                  const isActive = settings?.activeMode === mode;
+                  return (
+                    <Button
+                      key={mode}
+                      variant={isActive ? "default" : "outline"}
+                      disabled={saving || !info?.configured || isConnected}
+                      onClick={() => handleSetMode(mode)}
+                      className="flex-1"
+                    >
+                      {MODE_LABEL[mode]}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {isConnected
+                  ? "La cuenta está conectada por OAuth: el modo lo define esa conexión."
+                  : "No se puede activar un modo sin sus credenciales configuradas."}
+              </p>
+            </div>
+
+            {/* Credenciales por modo */}
+            <div className="space-y-4">
+              {(["test", "production"] as Mode[]).map((mode) => {
+                const info = mode === "production" ? settings?.production : settings?.test;
+                const draft = drafts[mode];
+                return (
+                  <div
+                    key={mode}
+                    className="rounded-lg border border-border bg-card p-4 space-y-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium">{MODE_LABEL[mode]}</h3>
+                      {info?.configured ? (
+                        <span className="flex items-center gap-1 text-xs text-green-600">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {info.source === "env" ? "Variable de entorno" : "Cargado en la app"}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-yellow-600">
+                          <AlertCircle className="w-3.5 h-3.5" /> No configurado
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`token-${mode}`}>Access token</Label>
+                      <Input
+                        id={`token-${mode}`}
+                        type="password"
+                        autoComplete="off"
+                        value={draft.accessToken}
+                        onChange={(e) => updateDraft(mode, "accessToken", e.target.value)}
+                        placeholder={info?.tokenMasked ?? "APP_USR-..."}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`secret-${mode}`}>Webhook secret</Label>
+                      <Input
+                        id={`secret-${mode}`}
+                        type="password"
+                        autoComplete="off"
+                        value={draft.webhookSecret}
+                        onChange={(e) => updateDraft(mode, "webhookSecret", e.target.value)}
+                        placeholder={
+                          info?.hasWebhookSecret ? "•••• (configurado)" : "Webhook secret"
+                        }
+                      />
+                    </div>
+
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveCredentials(mode)}
+                      disabled={
+                        savingMode === mode ||
+                        (!draft.accessToken.trim() && !draft.webhookSecret.trim())
+                      }
+                    >
+                      {savingMode === mode ? "Guardando..." : "Guardar credenciales"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Links útiles */}

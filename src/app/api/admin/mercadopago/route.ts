@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifySession, fsQuery } from "@/lib/firebase/admin";
+import { requireAdminEmail } from "@/lib/auth/admin-guard";
 import {
   getSettingsForUI,
   setActiveMode,
@@ -18,37 +17,6 @@ type PutBody =
       accessToken?: string;
       webhookSecret?: string;
     };
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim())
-  .filter(Boolean);
-
-/**
- * Verificación reforzada: además de validar el token, chequea que el email sea admin
- * (lista de env o invitación aceptada). Más estricto que el verifyAdmin genérico porque
- * acá se administra la configuración de pagos. Devuelve el email si es admin, o null.
- */
-async function requireAdminEmail(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("__session");
-  if (!session?.value) return null;
-
-  const user = await verifySession(session.value);
-  if (!user) return null;
-
-  if (ADMIN_EMAILS.includes(user.email)) return user.email;
-
-  try {
-    const invitations = await fsQuery("admin_invitations", [
-      { field: "email", op: "EQUAL", value: user.email },
-    ]);
-    if (invitations.length > 0) return user.email;
-  } catch {
-    // si la query falla, denegar
-  }
-  return null;
-}
 
 export async function GET() {
   if (!(await requireAdminEmail())) {

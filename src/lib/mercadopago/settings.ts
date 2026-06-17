@@ -2,6 +2,7 @@
 // importar desde componentes cliente.
 import { fsGet, fsSet } from "../firebase/admin";
 import { encryptSecret, decryptSecret } from "../crypto/secrets";
+import { ensureValidToken, toOAuthUI } from "./oauth";
 import type {
   MercadoPagoMode,
   MercadoPagoSettings,
@@ -125,6 +126,20 @@ export async function getActiveMercadoPago(): Promise<
   ({ mode: MercadoPagoMode } & ModeCredentials) | null
 > {
   const doc = await getDoc();
+
+  // Precedencia: OAuth (si está conectado) > credenciales estáticas (DB) > env.
+  // El contrato de retorno { mode, accessToken, webhookSecret } no cambia, así que checkout,
+  // status, webhook y client.ts no necesitan tocarse.
+  const oauthToken = await ensureValidToken(doc);
+  if (oauthToken) {
+    // OAuth no devuelve webhook secret (se configura a nivel app de MP). Sigue saliendo de la
+    // config estática/env del modo derivado de live_mode.
+    const mode: MercadoPagoMode = doc?.oauth?.liveMode ? "production" : "test";
+    const { creds } = await resolveCreds(mode, doc);
+    const webhookSecret = creds?.webhookSecret ?? "";
+    return { mode, accessToken: oauthToken, webhookSecret };
+  }
+
   const mode = doc?.activeMode === "production" ? "production" : "test";
   const { creds } = await resolveCreds(mode, doc);
   if (!creds) return null;
@@ -179,6 +194,7 @@ export async function getSettingsForUI(): Promise<MercadoPagoSettingsUI> {
       source: production.source,
       hasWebhookSecret: !!production.creds?.webhookSecret,
     },
+    oauth: toOAuthUI(doc?.oauth),
     updatedAt: doc?.updatedAt,
     updatedBy: doc?.updatedBy,
   };
