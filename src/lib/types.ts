@@ -136,12 +136,34 @@ export interface EncryptedModeCreds {
   webhookSecretEnc?: string;
 }
 
+// Estado de la conexión OAuth con MercadoPago. Vive dentro del doc `settings/mercadopago`.
+// Los tokens se guardan encriptados (formato "v1:...") aunque las rules ya cierren la colección
+// al cliente (defensa en profundidad). OAuth es la forma principal de conectar; las credenciales
+// estáticas (test/production) quedan como fallback.
+export type MercadoPagoOAuthStatus = "disconnected" | "pending" | "connected" | "error";
+
+export interface MercadoPagoOAuth {
+  status: MercadoPagoOAuthStatus;
+  accessTokenEnc?: string;
+  refreshTokenEnc?: string;
+  expiresAt?: string; // ISO; vencimiento del access token
+  accountId?: string; // user_id de MP
+  publicKey?: string;
+  liveMode?: boolean; // del token response (producción vs sandbox)
+  email?: string;
+  nickname?: string;
+  codeVerifierEnc?: string; // temporal: se setea en status=pending, se borra al conectar
+  connectedAt?: string;
+  lastError?: string;
+}
+
 export interface MercadoPagoSettings {
   activeMode: MercadoPagoMode;
   // Si está deshabilitado, MercadoPago no se ofrece en el checkout. Default (ausente) = true.
   enabled?: boolean;
   test?: EncryptedModeCreds;
   production?: EncryptedModeCreds;
+  oauth?: MercadoPagoOAuth;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -157,11 +179,22 @@ export interface MercadoPagoModeUI {
   hasWebhookSecret: boolean;
 }
 
+// Proyección NO secreta del estado OAuth para la UI de admin (nunca expone tokens).
+export interface MercadoPagoOAuthUI {
+  status: MercadoPagoOAuthStatus;
+  email?: string;
+  nickname?: string;
+  liveMode?: boolean;
+  connectedAt?: string;
+  lastError?: string;
+}
+
 export interface MercadoPagoSettingsUI {
   activeMode: MercadoPagoMode;
   enabled: boolean;
   test: MercadoPagoModeUI;
   production: MercadoPagoModeUI;
+  oauth: MercadoPagoOAuthUI;
   updatedAt?: string;
   updatedBy?: string;
 }

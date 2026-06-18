@@ -19,6 +19,13 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+// ─── Base64url (URL-safe, sin padding) ───
+// PKCE y la firma del state viajan en query params, por eso necesitan base64url (no el base64
+// estándar de arriba, que usa `+`, `/` y `=`).
+function bytesToBase64Url(bytes: Uint8Array): string {
+  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 /** Deriva (y cachea) la CryptoKey AES-256-GCM desde `MP_ENCRYPTION_KEY` (base64 de 32 bytes). */
 async function getMasterKey(): Promise<CryptoKey> {
   if (cachedKey) return cachedKey;
@@ -86,4 +93,101 @@ export async function decryptSecret(stored: string): Promise<string> {
   } catch {
     throw new Error("No se pudo desencriptar (clave incorrecta o dato corrupto).");
   }
+}
+
+// ─── PKCE (OAuth) ───
+// Protege el intercambio del authorization code: el `codeVerifier` (secreto) se guarda en el
+// server y solo su hash (`codeChallenge`) viaja en la URL de autorización. MercadoPago exige
+// que el verifier coincida al canjear el code.
+
+/** Genera un par PKCE: verifier aleatorio (43 chars base64url) y su challenge SHA-256 (S256). */
+export async function generatePKCE(): Promise<{ codeVerifier: string; codeChallenge: string }> {
+  const codeVerifier = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+  const digest = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier))
+  );
+  return { codeVerifier, codeChallenge: bytesToBase64Url(digest) };
+}
+
+// ─── State firmado (CSRF) ───
+// El parámetro `state` del flujo OAuth se firma con HMAC-SHA256 (`AUTH_SECRET`) para que el
+// callback pueda verificar que el request lo originó nuestra app y no es un replay/forgery.
+
+const STATE_MAX_AGE_MS = 10 * 60 * 1000; // 10 min: ventana de vida del state
+
+let cachedHmacKey: CryptoKey | null = null;
+
+async function getHmacKey(): Promise<CryptoKey> {
+  if (cachedHmacKey) return cachedHmacKey;
+  const raw = process.env.AUTH_SECRET?.trim();
+  if (!raw) {
+    throw new Error("AUTH_SECRET no está configurada (requerida para firmar el state de OAuth).");
+  }
+  cachedHmacKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(raw),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+  return cachedHmacKey;
+}
+
+/**
+ * Firma un state OAuth. Incluye un nonce y timestamp; devuelve `payloadB64url.sigB64url`.
+ * El payload extra (ej. nada en single-tenant) puede pasarse como objeto serializable.
+ */
+export async function signState(extra: Record<string, unknown> = {}): Promise<string> {
+  const key = await getHmacKey();
+  const payload = {
+    ...extra,
+    n: bytesToBase64Url(crypto.getRandomValues(new Uint8Array(12))),
+    t: Date.now(),
+  };
+  const payloadB64 = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
+  const sig = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payloadB64))
+  );
+  return `${payloadB64}.${bytesToBase64Url(sig)}`;
+}
+
+/**
+ * Verifica un state firmado: chequea la firma HMAC y que no esté vencido (>10 min). Devuelve el
+ * payload decodificado o null si es inválido/vencido/manipulado.
+ */
+export async function verifyState(
+  signed: string | null | undefined
+): Promise<Record<string, unknown> | null> {
+  if (!signed) return null;
+  const dot = signed.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const payloadB64 = signed.slice(0, dot);
+  const sigB64 = signed.slice(dot + 1);
+
+  try {
+    const key = await getHmacKey();
+    const sigBytes = base64UrlToBytes(sigB64);
+    const ok = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      sigBytes,
+      new TextEncoder().encode(payloadB64)
+    );
+    if (!ok) return null;
+
+    const payload = JSON.parse(
+      new TextDecoder().decode(base64UrlToBytes(payloadB64))
+    ) as Record<string, unknown>;
+    const ts = typeof payload.t === "number" ? payload.t : 0;
+    if (!ts || Date.now() - ts > STATE_MAX_AGE_MS) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function base64UrlToBytes(b64url: string): Uint8Array<ArrayBuffer> {
+  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+  return base64ToBytes(padded);
 }
