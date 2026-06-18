@@ -26,22 +26,26 @@ const USERS_ME_URL = "https://api.mercadopago.com/users/me";
 
 const REFRESH_SKEW_MS = 5 * 60 * 1000; // refresca si vence en <5 min
 
+// Default consistente con el resto del codebase (checkout/route.ts, etc.): si NEXT_PUBLIC_BASE_URL
+// no está seteada en Vercel, se usa el dominio de producción. Para OAuth el redirect_uri debe
+// coincidir EXACTO con el whitelisteado en la app de MP, así que este default tiene que ser el
+// dominio real de producción.
+const DEFAULT_BASE_URL = "https://www.unfuegomdq.com.ar";
+
 function getEnv() {
   const clientId = process.env.MERCADOPAGO_CLIENT_ID?.trim();
   const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET?.trim();
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  // client_id/client_secret no tienen default razonable: son obligatorias.
   if (!clientId || !clientSecret) {
     throw new Error(
       "Faltan MERCADOPAGO_CLIENT_ID / MERCADOPAGO_CLIENT_SECRET (requeridas para OAuth)."
     );
   }
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_BASE_URL no está configurada (requerida para el redirect de OAuth).");
-  }
+  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/$/, "");
   return {
     clientId,
     clientSecret,
-    redirectUri: `${baseUrl.replace(/\/$/, "")}/api/integrations/mercadopago/callback`,
+    redirectUri: `${baseUrl}/api/integrations/mercadopago/callback`,
   };
 }
 
