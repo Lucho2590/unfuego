@@ -5,6 +5,7 @@ import { Minus, Plus } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatCurrency, getProductPrice } from "@/lib/utils";
 import { ProductImageGallery } from "./ProductImageGallery";
+import { ProductDescription } from "./ProductDescription";
 import { AddToCartButton } from "./AddToCartButton";
 
 interface ProductDetailProps {
@@ -16,12 +17,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const priceInfo = getProductPrice(product);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 md:items-start">
       <ProductImageGallery
         images={product.images}
         productName={product.name}
       />
 
+      {/* Bloque de compra: precio + cantidad + agregar, pegado arriba */}
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-light tracking-tight">
@@ -45,10 +47,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </p>
           )}
         </div>
-
-        <p className="text-muted-foreground leading-relaxed">
-          {product.description}
-        </p>
 
         {product.stock > 0 && (
           <div className="space-y-4">
@@ -90,6 +88,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </p>
         )}
       </div>
+
+      {/* Descripción a ancho completo, debajo de la foto y el bloque de compra */}
+      <ProductDescription
+        description={product.description}
+        className="md:col-span-2"
+      />
     </div>
   );
 }
