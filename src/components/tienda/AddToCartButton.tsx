@@ -19,8 +19,10 @@ export function AddToCartButton({
 }: AddToCartButtonProps) {
   const addItem = useCartStore((s) => s.addItem);
 
+  const outOfStock = product.stock <= 0;
+
   const handleAdd = () => {
-    if (product.stock <= 0) return;
+    if (outOfStock) return;
 
     addItem({
       productId: product.id,
@@ -32,8 +34,6 @@ export function AddToCartButton({
       image: product.images?.[0] ?? "",
     });
   };
-
-  const outOfStock = product.stock <= 0;
 
   return (
     <Button

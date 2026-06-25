@@ -8,6 +8,11 @@ import type { Product } from "../types";
 // primero, preservando el comportamiento previo). Se ordena en memoria para no
 // depender de índices compuestos ni perder docs sin el campo en el orderBy de Firestore.
 function bySortOrder(a: Product, b: Product): number {
+  // "Próximamente" siempre al final, sin importar su sortOrder.
+  const ac = a.comingSoon ? 1 : 0;
+  const bc = b.comingSoon ? 1 : 0;
+  if (ac !== bc) return ac - bc;
+
   const ao = a.sortOrder ?? Infinity;
   const bo = b.sortOrder ?? Infinity;
   if (ao !== bo) return ao - bo;

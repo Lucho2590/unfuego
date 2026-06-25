@@ -53,6 +53,9 @@ export default async function AdminProductosPage() {
               </div>
               {/* relative z-10 para quedar por encima del overlay y ser interactivo */}
               <div className="relative z-10 flex items-center gap-3">
+                {product.comingSoon && (
+                  <Badge variant="secondary">Próximamente</Badge>
+                )}
                 <Badge variant={product.isActive ? "default" : "secondary"}>
                   {product.isActive ? "Activo" : "Inactivo"}
                 </Badge>

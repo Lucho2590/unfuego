@@ -9,6 +9,7 @@ export interface Product {
   category: string;
   stock: number;
   isActive: boolean;
+  comingSoon?: boolean; // true = "Próximamente": visible pero no se puede comprar
   weight?: number;
   sortOrder?: number; // menor = aparece primero; sin valor = al final
   discountType?: DiscountType | null; // tipo de descuento manual; null = sin descuento
