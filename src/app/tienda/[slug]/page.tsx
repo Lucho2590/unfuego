@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
 
-  if (!product) {
+  if (!product || product.comingSoon) {
     return { title: "Producto no encontrado | Un Fuego" };
   }
 
@@ -30,18 +30,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export const revalidate = 3600;
 
-// Pre-renderiza las fichas de productos activos. dynamicParams queda en su
-// default (true): un producto nuevo aún no listado se sirve on-demand igual.
+// Pre-renderiza las fichas de productos activos (excluye "Próximamente", que no
+// tienen ficha accesible). dynamicParams queda en su default (true): un producto
+// nuevo aún no listado se sirve on-demand igual.
 export async function generateStaticParams() {
   const products = await getProducts();
-  return products.map((product) => ({ slug: product.slug }));
+  return products
+    .filter((product) => !product.comingSoon)
+    .map((product) => ({ slug: product.slug }));
 }
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
 
-  if (!product) {
+  // Los productos "Próximamente" se listan en la tienda pero no tienen ficha:
+  // entrar directo a su URL devuelve 404.
+  if (!product || product.comingSoon) {
     notFound();
   }
 

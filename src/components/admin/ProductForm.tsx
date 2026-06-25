@@ -52,6 +52,7 @@ export function ProductForm({ product, sections = [] }: ProductFormProps) {
     discountValue: product?.discountValue?.toString() ?? "",
     discountDescription: product?.discountDescription ?? "",
     isActive: product?.isActive ?? true,
+    comingSoon: product?.comingSoon ?? false,
     images: product?.images ?? [],
   });
 
@@ -229,6 +230,17 @@ export function ProductForm({ product, sections = [] }: ProductFormProps) {
             className="rounded"
           />
           <Label htmlFor="isActive">Activo (visible en tienda)</Label>
+        </div>
+
+        <div className="flex items-center gap-2 self-end">
+          <input
+            type="checkbox"
+            id="comingSoon"
+            checked={form.comingSoon}
+            onChange={(e) => updateField("comingSoon", e.target.checked)}
+            className="rounded"
+          />
+          <Label htmlFor="comingSoon">Próximamente (no se puede comprar)</Label>
         </div>
       </div>
 

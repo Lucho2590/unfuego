@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       category: body.category ?? "",
       stock: Number(body.stock),
       isActive: body.isActive ?? true,
+      comingSoon: body.comingSoon ?? false,
       images: body.images ?? [],
       sortOrder: body.sortOrder ?? null,
       discountType: body.discountType ?? null,
@@ -57,6 +58,7 @@ export async function PUT(request: Request) {
       ...data,
       price: Number(data.price),
       stock: Number(data.stock),
+      comingSoon: data.comingSoon ?? false,
       sortOrder:
         data.sortOrder === null || data.sortOrder === undefined
           ? null
