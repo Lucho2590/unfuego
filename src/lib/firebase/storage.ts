@@ -25,6 +25,15 @@ export function getProductImagePath(productId: string, fileName: string): string
   return `products/${productId}/${fileName}`;
 }
 
+/**
+ * Path del manual (PDF) de un producto. Se guarda al mismo nivel que las imágenes
+ * (`products/{id}/…`) para quedar cubierto por la misma regla de Storage; el prefijo
+ * "manual-" lo distingue de las imágenes.
+ */
+export function getProductManualPath(productId: string, fileName: string): string {
+  return `products/${productId}/manual-${fileName}`;
+}
+
 export function getTransferProofPath(orderId: string, fileName: string): string {
   return `transfer-proofs/${orderId}/${fileName}`;
 }

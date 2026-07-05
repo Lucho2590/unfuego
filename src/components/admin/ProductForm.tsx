@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImageUploader } from "./ImageUploader";
+import { PdfUploader } from "./PdfUploader";
 import {
   slugify,
   formatThousands,
@@ -54,6 +55,7 @@ export function ProductForm({ product, sections = [] }: ProductFormProps) {
     isActive: product?.isActive ?? true,
     comingSoon: product?.comingSoon ?? false,
     images: product?.images ?? [],
+    manualUrl: product?.manualUrl ?? "",
   });
 
   const updateField = (field: string, value: string | boolean | string[]) => {
@@ -334,6 +336,15 @@ export function ProductForm({ product, sections = [] }: ProductFormProps) {
           productId={product?.id ?? "new"}
           images={form.images}
           onImagesChange={(images) => updateField("images", images)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Manual de armado (PDF)</Label>
+        <PdfUploader
+          productId={product?.id ?? "new"}
+          manualUrl={form.manualUrl}
+          onChange={(url) => updateField("manualUrl", url)}
         />
       </div>
 

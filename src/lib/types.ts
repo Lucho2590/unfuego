@@ -6,6 +6,7 @@ export interface Product {
   shortDescription: string;
   price: number;
   images: string[];
+  manualUrl?: string | null; // URL de descarga del manual de armado en PDF (Firebase Storage)
   category: string;
   stock: number;
   isActive: boolean;
