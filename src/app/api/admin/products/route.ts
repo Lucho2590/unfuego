@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       comingSoon: body.comingSoon ?? false,
       images: body.images ?? [],
       manualUrl: body.manualUrl || null,
+      manualLabel: body.manualLabel?.trim() || null,
       sortOrder: body.sortOrder ?? null,
       discountType: body.discountType ?? null,
       discountValue:
@@ -61,6 +62,7 @@ export async function PUT(request: Request) {
       stock: Number(data.stock),
       comingSoon: data.comingSoon ?? false,
       manualUrl: data.manualUrl || null,
+      manualLabel: data.manualLabel?.trim() || null,
       sortOrder:
         data.sortOrder === null || data.sortOrder === undefined
           ? null

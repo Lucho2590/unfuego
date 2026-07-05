@@ -56,6 +56,7 @@ export function ProductForm({ product, sections = [] }: ProductFormProps) {
     comingSoon: product?.comingSoon ?? false,
     images: product?.images ?? [],
     manualUrl: product?.manualUrl ?? "",
+    manualLabel: product?.manualLabel ?? "",
   });
 
   const updateField = (field: string, value: string | boolean | string[]) => {
@@ -346,6 +347,15 @@ export function ProductForm({ product, sections = [] }: ProductFormProps) {
           manualUrl={form.manualUrl}
           onChange={(url) => updateField("manualUrl", url)}
         />
+        <div className="space-y-2 pt-1">
+          <Label htmlFor="manualLabel">Texto del botón de descarga</Label>
+          <Input
+            id="manualLabel"
+            value={form.manualLabel}
+            onChange={(e) => updateField("manualLabel", e.target.value)}
+            placeholder="Descargar manual (PDF)"
+          />
+        </div>
       </div>
 
       <div className="flex gap-3">
