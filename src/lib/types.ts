@@ -7,6 +7,7 @@ export interface Product {
   price: number;
   images: string[];
   manualUrl?: string | null; // URL de descarga del manual de armado en PDF (Firebase Storage)
+  manualLabel?: string | null; // texto del botón de descarga; si es null usa el default
   category: string;
   stock: number;
   isActive: boolean;

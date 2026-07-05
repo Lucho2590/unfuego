@@ -97,7 +97,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               rel="noopener noreferrer"
             >
               <FileDown className="w-4 h-4 mr-2" />
-              Descargar manual (PDF)
+              {product.manualLabel || "Descargar manual (PDF)"}
             </a>
           </Button>
         )}
