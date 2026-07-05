@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, FileDown } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatCurrency, getProductPrice } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "./ProductImageGallery";
 import { ProductDescription } from "./ProductDescription";
 import { AddToCartButton } from "./AddToCartButton";
@@ -86,6 +87,19 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <p className="text-sm text-muted-foreground">
             Producto sin stock temporalmente
           </p>
+        )}
+
+        {product.manualUrl && (
+          <Button asChild variant="outline" size="lg" className="w-full">
+            <a
+              href={product.manualUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              Descargar manual (PDF)
+            </a>
+          </Button>
         )}
       </div>
 
