@@ -8,6 +8,7 @@ import {
   Hr,
 } from "@react-email/components";
 import type { Order } from "@/lib/types";
+import { EmailLogoHeader } from "../EmailLogoHeader";
 
 interface TransferRejectedEmailProps {
   order: Order;
@@ -19,9 +20,7 @@ export function TransferRejectedEmail({ order }: TransferRejectedEmailProps) {
       <Head />
       <Body style={main}>
         <Container style={container}>
-          <Section style={header}>
-            <Text style={title}>Un Fuego</Text>
-          </Section>
+          <EmailLogoHeader />
 
           <Section>
             <Text style={heading}>No pudimos validar tu transferencia</Text>
@@ -48,13 +47,6 @@ const main = {
   fontFamily: "system-ui, -apple-system, sans-serif",
 };
 const container = { margin: "0 auto", padding: "40px 20px", maxWidth: "560px" };
-const header = { textAlign: "center" as const, marginBottom: "32px" };
-const title = {
-  color: "#f5f5f5",
-  fontSize: "24px",
-  fontWeight: "300",
-  letterSpacing: "0.05em",
-};
 const heading = { color: "#f5f5f5", fontSize: "20px", fontWeight: "500", marginBottom: "8px" };
 const text = { color: "#a0a0a0", fontSize: "14px", lineHeight: "1.6" };
 const hr = { borderColor: "#333", margin: "24px 0" };

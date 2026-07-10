@@ -6,10 +6,10 @@ import {
   Section,
   Text,
   Hr,
-  Img,
 } from "@react-email/components";
 import type { Order } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { EmailLogoHeader } from "../EmailLogoHeader";
 
 interface OrderConfirmationEmailProps {
   order: Order;
@@ -21,9 +21,7 @@ export function OrderConfirmationEmail({ order }: OrderConfirmationEmailProps) {
       <Head />
       <Body style={main}>
         <Container style={container}>
-          <Section style={header}>
-            <Text style={title}>Un Fuego</Text>
-          </Section>
+          <EmailLogoHeader />
 
           <Section>
             <Text style={heading}>
@@ -55,28 +53,14 @@ export function OrderConfirmationEmail({ order }: OrderConfirmationEmailProps) {
             <Text style={summaryText}>
               Subtotal: {formatCurrency(order.subtotal)}
             </Text>
-            <Text style={summaryText}>
-              Envío: {formatCurrency(order.shippingCost)}
-            </Text>
+            {order.shippingCost > 0 && (
+              <Text style={summaryText}>
+                Envío: {formatCurrency(order.shippingCost)}
+              </Text>
+            )}
             <Text style={totalText}>
               Total: {formatCurrency(order.total)}
             </Text>
-          </Section>
-
-          <Hr style={hr} />
-
-          <Section>
-            <Text style={subheading}>Dirección de envío</Text>
-            <Text style={text}>
-              {order.shipping.address}
-              <br />
-              {order.shipping.city}, {order.shipping.province}
-              <br />
-              CP: {order.shipping.postalCode}
-            </Text>
-            {order.shipping.notes && (
-              <Text style={text}>Notas: {order.shipping.notes}</Text>
-            )}
           </Section>
 
           <Hr style={hr} />
@@ -109,18 +93,6 @@ const container = {
   margin: "0 auto",
   padding: "40px 20px",
   maxWidth: "560px",
-};
-
-const header = {
-  textAlign: "center" as const,
-  marginBottom: "32px",
-};
-
-const title = {
-  color: "#f5f5f5",
-  fontSize: "24px",
-  fontWeight: "300",
-  letterSpacing: "0.05em",
 };
 
 const heading = {
