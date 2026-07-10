@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getOrderById, updateOrder } from "@/lib/firebase/orders";
-import { sendTransferReceiptReceived } from "@/lib/email/send";
+import {
+  sendTransferReceiptReceived,
+  sendTransferReceiptAdminNotification,
+} from "@/lib/email/send";
 import type { Order } from "@/lib/types";
 
 /**
@@ -51,10 +54,21 @@ export async function POST(
       },
     } as Partial<Omit<Order, "id">>);
 
+    const orderWithReceipt: Order = {
+      ...order,
+      bankTransfer: { ...order.bankTransfer, receiptUrl },
+    };
+
     try {
-      await sendTransferReceiptReceived({ ...order, bankTransfer: { ...order.bankTransfer, receiptUrl } });
+      await sendTransferReceiptReceived(orderWithReceipt);
     } catch (emailError) {
       console.error("Error enviando email de comprobante recibido:", emailError);
+    }
+
+    try {
+      await sendTransferReceiptAdminNotification(orderWithReceipt);
+    } catch (emailError) {
+      console.error("Error enviando aviso de comprobante al admin:", emailError);
     }
 
     return NextResponse.json({ success: true });

@@ -1,9 +1,11 @@
 import { resend } from "@/lib/resend";
+import { LOGO_EMAIL_BASE64 } from "./assets";
 import { OrderConfirmationEmail } from "./templates/order-confirmation";
 import { NewOrderAdminEmail } from "./templates/new-order-admin";
 import { TransferInstructionsEmail } from "./templates/transfer-instructions";
 import { NewTransferAdminEmail } from "./templates/new-transfer-admin";
 import { TransferReceiptReceivedEmail } from "./templates/transfer-receipt-received";
+import { TransferReceiptAdminEmail } from "./templates/transfer-receipt-admin";
 import { TransferRejectedEmail } from "./templates/transfer-rejected";
 import { OrderShippedEmail } from "./templates/order-shipped";
 import type { Order, TransferSettings } from "@/lib/types";
@@ -49,6 +51,15 @@ export async function sendTransferInstructions(
     to: order.customer.email,
     subject: `Completá tu pago por transferencia - Pedido ${order.orderNumber}`,
     react: TransferInstructionsEmail({ order, settings, trackUrl }),
+    // Logo adjunto inline (referenciado como cid:unfuego-logo en el template),
+    // para que se vea en cualquier bandeja sin depender de una URL pública.
+    attachments: [
+      {
+        filename: "unfuego.png",
+        content: LOGO_EMAIL_BASE64,
+        contentId: "unfuego-logo",
+      },
+    ],
   });
 }
 
@@ -73,6 +84,18 @@ export async function sendTransferReceiptReceived(order: Order) {
     to: order.customer.email,
     subject: `Recibimos tu comprobante - Pedido ${order.orderNumber}`,
     react: TransferReceiptReceivedEmail({ order }),
+  });
+}
+
+/** Al subir el comprobante: aviso al admin con la preview del comprobante para revisar. */
+export async function sendTransferReceiptAdminNotification(order: Order) {
+  if (!resend || !ADMIN_EMAIL) return;
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `Comprobante recibido - Pedido ${order.orderNumber}`,
+    react: TransferReceiptAdminEmail({ order }),
   });
 }
 

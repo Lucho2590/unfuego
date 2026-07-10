@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import { MessageCircle } from "lucide-react";
 import { getOrderById } from "@/lib/firebase/orders";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { UpdateOrderStatus } from "@/components/admin/UpdateOrderStatus";
 import { ReviewTransfer } from "@/components/admin/ReviewTransfer";
-import { formatCurrency, formatPhone, telHref } from "@/lib/utils";
+import { formatCurrency, formatPhone, telHref, whatsappLink } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +55,21 @@ export default async function OrderDetailPage({ params }: Props) {
             </a>
           </p>
         </div>
+        {order.customer.phone && (
+          <Button asChild variant="outline" size="sm">
+            <a
+              href={whatsappLink(
+                order.customer.phone,
+                `Hola ${order.customer.name}! Te escribimos de Un Fuego por tu pedido ${order.orderNumber} para coordinar la entrega.`
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Contactar por WhatsApp
+            </a>
+          </Button>
+        )}
       </div>
 
       {/* Shipping */}

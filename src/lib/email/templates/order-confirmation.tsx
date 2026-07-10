@@ -82,6 +82,14 @@ export function OrderConfirmationEmail({ order }: OrderConfirmationEmailProps) {
           <Hr style={hr} />
 
           <Section>
+            <Text style={text}>
+              Nos pondremos en contacto con vos para coordinar la entrega.
+            </Text>
+          </Section>
+
+          <Hr style={hr} />
+
+          <Section>
             <Text style={footer}>
               Gracias por elegirnos. Un fuego, en cualquier lugar.
             </Text>

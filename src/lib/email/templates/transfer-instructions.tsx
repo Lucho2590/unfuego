@@ -7,6 +7,7 @@ import {
   Text,
   Hr,
   Button,
+  Img,
 } from "@react-email/components";
 import type { Order, TransferSettings } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -31,7 +32,12 @@ export function TransferInstructionsEmail({
       <Body style={main}>
         <Container style={container}>
           <Section style={header}>
-            <Text style={title}>Un Fuego</Text>
+            <Img
+              src="cid:unfuego-logo"
+              alt="Un Fuego"
+              width="180"
+              style={logo}
+            />
           </Section>
 
           <Section>
@@ -49,8 +55,24 @@ export function TransferInstructionsEmail({
             {settings.bank && <Text style={text}>Banco: {settings.bank}</Text>}
             {settings.titular && <Text style={text}>Titular: {settings.titular}</Text>}
             {settings.cuit && <Text style={text}>CUIT/CUIL: {settings.cuit}</Text>}
-            {settings.cbu && <Text style={text}>CBU: {settings.cbu}</Text>}
-            {settings.alias && <Text style={text}>Alias: {settings.alias}</Text>}
+
+            {settings.cbu && (
+              <>
+                <Text style={dataLabel}>CBU</Text>
+                <Text style={dataValue}>{settings.cbu}</Text>
+              </>
+            )}
+            {settings.alias && (
+              <>
+                <Text style={dataLabel}>Alias</Text>
+                <Text style={dataValue}>{settings.alias}</Text>
+              </>
+            )}
+            {(settings.cbu || settings.alias) && (
+              <Text style={dataHint}>
+                Mantené presionado (o seleccioná) el CBU o el alias para copiarlo.
+              </Text>
+            )}
           </Section>
 
           <Hr style={hr} />
@@ -114,12 +136,22 @@ const main = {
 };
 const container = { margin: "0 auto", padding: "40px 20px", maxWidth: "560px" };
 const header = { textAlign: "center" as const, marginBottom: "32px" };
-const title = {
-  color: "#f5f5f5",
-  fontSize: "24px",
-  fontWeight: "300",
-  letterSpacing: "0.05em",
+const logo = { margin: "0 auto", display: "block" };
+const dataLabel = {
+  color: "#a0a0a0",
+  fontSize: "12px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.08em",
+  margin: "12px 0 4px",
 };
+const dataValue = {
+  color: "#f5f5f5",
+  fontSize: "22px",
+  fontWeight: "600",
+  margin: "2px 0 4px",
+  wordBreak: "break-all" as const,
+};
+const dataHint = { color: "#666", fontSize: "12px", marginTop: "10px" };
 const heading = { color: "#f5f5f5", fontSize: "20px", fontWeight: "500", marginBottom: "8px" };
 const subheading = {
   color: "#f5f5f5",

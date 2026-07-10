@@ -68,6 +68,39 @@ export function telHref(raw: string): string {
   return `tel:${cleaned}`
 }
 
+/**
+ * Normaliza un teléfono al formato que espera wa.me para Argentina: `549` + área +
+ * número, sin `0` inicial ni `15`. Best-effort: si el número viene en un formato raro
+ * puede no quedar perfecto (el teléfono se muestra igual en texto para copiarlo).
+ */
+export function whatsappNumber(raw: string | null | undefined): string {
+  let d = (raw ?? "").replace(/\D/g, "")
+  if (!d) return ""
+  if (d.startsWith("54")) d = d.slice(2) // sacamos país; lo reponemos como 549
+  if (d.startsWith("0")) d = d.slice(1) // trunk nacional
+  if (d.startsWith("9")) d = d.slice(1) // 9 de celular (lo reponemos)
+  // "15" de celular local pegado al área (ej. 11 15 xxxx): lo quitamos si quedó al medio
+  d = d.replace(/^(\d{2,4})15(\d{6,8})$/, "$1$2")
+  return `549${d}`
+}
+
+/** Link de WhatsApp (wa.me) con mensaje opcional prearmado. */
+export function whatsappLink(raw: string | null | undefined, text?: string): string {
+  const num = whatsappNumber(raw)
+  const query = text ? `?text=${encodeURIComponent(text)}` : ""
+  return `https://wa.me/${num}${query}`
+}
+
+/** Detecta si una URL apunta a un PDF (mirando la extensión del path, sin la query). */
+export function isPdfUrl(url: string): boolean {
+  try {
+    const path = decodeURIComponent(new URL(url).pathname)
+    return /\.pdf$/i.test(path)
+  } catch {
+    return /\.pdf(\?|$)/i.test(url)
+  }
+}
+
 // ─── Precio con descuento ───
 
 export interface PriceInfo {
@@ -117,4 +150,12 @@ export function getProductPrice(product: DiscountableProduct): PriceInfo {
       ? product.discountDescription?.trim() || undefined
       : undefined,
   }
+}
+
+/** Enmascara un email para mostrarlo sin exponerlo del todo (ej. lu•••@gmail.com). */
+export function maskEmail(email: string): string {
+  const [user, domain] = email.split("@")
+  if (!domain) return email
+  const shown = user.slice(0, 2)
+  return `${shown}${"•".repeat(Math.max(1, user.length - 2))}@${domain}`
 }
