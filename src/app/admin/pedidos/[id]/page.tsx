@@ -77,10 +77,6 @@ export default async function OrderDetailPage({ params }: Props) {
         <h2 className="text-sm font-medium">Envío</h2>
         <div className="text-sm text-muted-foreground space-y-1">
           <p>{order.shipping.address}</p>
-          <p>
-            {order.shipping.city}, {order.shipping.province}
-          </p>
-          <p>CP: {order.shipping.postalCode}</p>
           {order.shipping.notes && <p>Notas: {order.shipping.notes}</p>}
         </div>
       </div>

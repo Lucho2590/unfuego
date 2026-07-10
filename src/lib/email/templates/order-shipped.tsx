@@ -39,8 +39,7 @@ export function OrderShippedEmail({ order }: OrderShippedEmailProps) {
               <Text style={text}>Número de guía: {tracking.number}</Text>
             )}
             <Text style={text}>
-              Dirección de envío: {order.shipping.address}, {order.shipping.city},{" "}
-              {order.shipping.province} (CP {order.shipping.postalCode})
+              Dirección de envío: {order.shipping.address}
             </Text>
           </Section>
 
