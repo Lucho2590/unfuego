@@ -88,9 +88,11 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
             <Text style={summaryText}>
               Subtotal: {formatCurrency(order.subtotal)}
             </Text>
-            <Text style={summaryText}>
-              Envío: {formatCurrency(order.shippingCost)}
-            </Text>
+            {order.shippingCost > 0 && (
+              <Text style={summaryText}>
+                Envío: {formatCurrency(order.shippingCost)}
+              </Text>
+            )}
             <Text style={totalText}>
               Total: {formatCurrency(order.total)}
             </Text>

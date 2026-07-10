@@ -7,10 +7,10 @@ import {
   Text,
   Hr,
   Button,
-  Img,
 } from "@react-email/components";
 import type { Order, TransferSettings } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { EmailLogoHeader } from "../EmailLogoHeader";
 
 interface TransferInstructionsEmailProps {
   order: Order;
@@ -31,14 +31,7 @@ export function TransferInstructionsEmail({
       <Head />
       <Body style={main}>
         <Container style={container}>
-          <Section style={header}>
-            <Img
-              src="cid:unfuego-logo"
-              alt="Un Fuego"
-              width="180"
-              style={logo}
-            />
-          </Section>
+          <EmailLogoHeader />
 
           <Section>
             <Text style={heading}>Completá tu pago por transferencia</Text>
@@ -86,9 +79,11 @@ export function TransferInstructionsEmail({
                 Descuento: −{formatCurrency(order.discount)}
               </Text>
             )}
-            <Text style={summaryText}>
-              Envío: {formatCurrency(order.shippingCost)}
-            </Text>
+            {order.shippingCost > 0 && (
+              <Text style={summaryText}>
+                Envío: {formatCurrency(order.shippingCost)}
+              </Text>
+            )}
             <Text style={totalText}>
               Total a transferir: {formatCurrency(order.total)}
             </Text>
@@ -135,8 +130,6 @@ const main = {
   fontFamily: "system-ui, -apple-system, sans-serif",
 };
 const container = { margin: "0 auto", padding: "40px 20px", maxWidth: "560px" };
-const header = { textAlign: "center" as const, marginBottom: "32px" };
-const logo = { margin: "0 auto", display: "block" };
 const dataLabel = {
   color: "#a0a0a0",
   fontSize: "12px",

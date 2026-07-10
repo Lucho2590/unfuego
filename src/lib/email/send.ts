@@ -14,6 +14,14 @@ import { formatCurrency } from "@/lib/utils";
 const FROM_EMAIL = process.env.EMAIL_FROM ?? "Un Fuego <pedidos@unfuegomdq.com.ar>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
+// Logo adjunto inline (referenciado como cid:unfuego-logo en los templates de cliente),
+// para que se vea en cualquier bandeja sin depender de una URL pública.
+const LOGO_ATTACHMENT = {
+  filename: "unfuego.png",
+  content: LOGO_EMAIL_BASE64,
+  contentId: "unfuego-logo",
+};
+
 export async function sendOrderConfirmation(order: Order) {
   if (!order.customer.email) return;
 
@@ -22,6 +30,7 @@ export async function sendOrderConfirmation(order: Order) {
     to: order.customer.email,
     subject: `Tu pedido ${order.orderNumber} fue confirmado - Un Fuego`,
     react: OrderConfirmationEmail({ order }),
+    attachments: [LOGO_ATTACHMENT],
   });
 }
 
@@ -51,15 +60,7 @@ export async function sendTransferInstructions(
     to: order.customer.email,
     subject: `Completá tu pago por transferencia - Pedido ${order.orderNumber}`,
     react: TransferInstructionsEmail({ order, settings, trackUrl }),
-    // Logo adjunto inline (referenciado como cid:unfuego-logo en el template),
-    // para que se vea en cualquier bandeja sin depender de una URL pública.
-    attachments: [
-      {
-        filename: "unfuego.png",
-        content: LOGO_EMAIL_BASE64,
-        contentId: "unfuego-logo",
-      },
-    ],
+    attachments: [LOGO_ATTACHMENT],
   });
 }
 
@@ -84,6 +85,7 @@ export async function sendTransferReceiptReceived(order: Order) {
     to: order.customer.email,
     subject: `Recibimos tu comprobante - Pedido ${order.orderNumber}`,
     react: TransferReceiptReceivedEmail({ order }),
+    attachments: [LOGO_ATTACHMENT],
   });
 }
 
@@ -108,6 +110,7 @@ export async function sendTransferRejected(order: Order) {
     to: order.customer.email,
     subject: `No pudimos validar tu transferencia - Pedido ${order.orderNumber}`,
     react: TransferRejectedEmail({ order }),
+    attachments: [LOGO_ATTACHMENT],
   });
 }
 
@@ -122,5 +125,6 @@ export async function sendOrderShipped(order: Order) {
     to: order.customer.email,
     subject: `Tu pedido ${order.orderNumber} fue despachado - Un Fuego`,
     react: OrderShippedEmail({ order }),
+    attachments: [LOGO_ATTACHMENT],
   });
 }
