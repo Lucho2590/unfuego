@@ -4,13 +4,12 @@ export const checkoutSchema = z.object({
   customer: z.object({
     name: z.string().min(2, "Nombre requerido"),
     email: z.string().email("Email inválido"),
-    phone: z.string().min(8, "Teléfono requerido"),
+    // E.164: "+" + código de país + número (ej. +5492235053759).
+    phone: z.string().regex(/^\+[1-9]\d{6,14}$/, "Teléfono inválido"),
   }),
   shipping: z.object({
+    // Domicilio como único string: "Calle Número, Ciudad (CP), Provincia, País".
     address: z.string().min(3, "Dirección requerida"),
-    city: z.string().min(2, "Ciudad requerida"),
-    province: z.string().min(2, "Provincia requerida"),
-    postalCode: z.string().min(4, "Código postal requerido"),
     notes: z.string().optional(),
   }),
 });

@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { isValidPhoneNumber } from "react-phone-number-input";
 import { useCartStore } from "@/lib/store/cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhoneField } from "@/components/ui/phone-field";
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { toast } from "sonner";
 import Image from "next/image";
-import { cn, formatCurrency, formatPhone } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 type PaymentMethod = "mercadopago" | "transfer";
 
@@ -56,9 +59,6 @@ export function CheckoutForm() {
     email: "",
     phone: "",
     address: "",
-    city: "",
-    province: "",
-    postalCode: "",
     notes: "",
   });
 
@@ -74,6 +74,16 @@ export function CheckoutForm() {
       return;
     }
 
+    if (!form.phone || !isValidPhoneNumber(form.phone)) {
+      toast.error("Ingresá un teléfono válido");
+      return;
+    }
+
+    if (form.address.trim().length < 3) {
+      toast.error("Ingresá tu dirección");
+      return;
+    }
+
     setLoading(true);
 
     const payload = {
@@ -84,9 +94,6 @@ export function CheckoutForm() {
       },
       shipping: {
         address: form.address,
-        city: form.city,
-        province: form.province,
-        postalCode: form.postalCode,
         notes: form.notes || undefined,
       },
       items: items.map((item) => ({
@@ -176,17 +183,11 @@ export function CheckoutForm() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Teléfono</Label>
-              <Input
+              <PhoneField
                 id="phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                value={formatPhone(form.phone)}
-                onChange={(e) =>
-                  updateField("phone", e.target.value.replace(/[^\d+]/g, ""))
-                }
-                required
-                placeholder="+54 223 512-3456"
+                value={form.phone}
+                onChange={(v) => updateField("phone", v || "")}
+                placeholder="223 512 3456"
               />
             </div>
           </div>
@@ -195,47 +196,14 @@ export function CheckoutForm() {
         {/* Shipping */}
         <div className="space-y-4">
           <h2 className="text-lg font-medium">Dirección de envío</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="address">Dirección</Label>
-              <Input
-                id="address"
-                value={form.address}
-                onChange={(e) => updateField("address", e.target.value)}
-                required
-                placeholder="Calle y número"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">Ciudad</Label>
-              <Input
-                id="city"
-                value={form.city}
-                onChange={(e) => updateField("city", e.target.value)}
-                required
-                placeholder="Mar del Plata"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="province">Provincia</Label>
-              <Input
-                id="province"
-                value={form.province}
-                onChange={(e) => updateField("province", e.target.value)}
-                required
-                placeholder="Buenos Aires"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="postalCode">Código postal</Label>
-              <Input
-                id="postalCode"
-                value={form.postalCode}
-                onChange={(e) => updateField("postalCode", e.target.value)}
-                required
-                placeholder="7600"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Dirección</Label>
+            <AddressAutocomplete
+              id="address"
+              value={form.address}
+              onChange={(address) => updateField("address", address)}
+              placeholder="Empezá a escribir tu dirección…"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notas (opcional)</Label>

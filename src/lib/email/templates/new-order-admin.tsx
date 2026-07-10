@@ -70,13 +70,7 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
 
           <Section>
             <Text style={subheading}>Envío</Text>
-            <Text style={text}>
-              {order.shipping.address}
-              <br />
-              {order.shipping.city}, {order.shipping.province}
-              <br />
-              CP: {order.shipping.postalCode}
-            </Text>
+            <Text style={text}>{order.shipping.address}</Text>
             {order.shipping.notes && (
               <Text style={text}>Notas: {order.shipping.notes}</Text>
             )}

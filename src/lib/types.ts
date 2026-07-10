@@ -49,10 +49,8 @@ export interface OrderCustomer {
 }
 
 export interface OrderShipping {
+  // Domicilio como único string: "Calle Número, Ciudad (CP), Provincia, País".
   address: string;
-  city: string;
-  province: string;
-  postalCode: string;
   notes?: string;
 }
 
