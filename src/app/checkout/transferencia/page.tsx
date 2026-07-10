@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Landmark, Mail } from "lucide-react";
+import { Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getOrderById } from "@/lib/firebase/orders";
 import { TransferTracker } from "@/components/checkout/TransferTracker";
@@ -52,15 +52,6 @@ export default async function TransferenciaPage({ searchParams }: Props) {
           </p>
         </div>
 
-        {/* Aviso: los datos bancarios están en el email */}
-        <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/30 p-4">
-          <Mail className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-muted-foreground">
-            Te enviamos un email a <span className="text-foreground">{maskEmail(order.customer.email)}</span> con
-            los datos para transferir. Revisá tu casilla (y el spam) si no lo ves.
-          </p>
-        </div>
-
         {/* Seguimiento del pedido */}
         <div className="rounded-lg border border-border bg-card p-5">
           <TransferTracker
@@ -69,6 +60,7 @@ export default async function TransferenciaPage({ searchParams }: Props) {
             initialHasReceipt={hasReceipt}
             canUpload={canUpload}
             token={canUpload ? token : undefined}
+            email={order.customer.email}
           />
         </div>
 
@@ -80,12 +72,4 @@ export default async function TransferenciaPage({ searchParams }: Props) {
       </div>
     </div>
   );
-}
-
-/** Enmascara el email para mostrarlo sin exponerlo del todo (ej. lu•••@gmail.com). */
-function maskEmail(email: string): string {
-  const [user, domain] = email.split("@");
-  if (!domain) return email;
-  const shown = user.slice(0, 2);
-  return `${shown}${"•".repeat(Math.max(1, user.length - 2))}@${domain}`;
 }

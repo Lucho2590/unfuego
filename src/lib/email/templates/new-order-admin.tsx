@@ -6,9 +6,10 @@ import {
   Section,
   Text,
   Hr,
+  Button,
 } from "@react-email/components";
 import type { Order } from "@/lib/types";
-import { formatCurrency, formatPhone } from "@/lib/utils";
+import { formatCurrency, formatPhone, whatsappLink } from "@/lib/utils";
 
 interface NewOrderAdminEmailProps {
   order: Order;
@@ -40,6 +41,17 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
               <br />
               {formatPhone(order.customer.phone)}
             </Text>
+            {order.customer.phone && (
+              <Button
+                href={whatsappLink(
+                  order.customer.phone,
+                  `Hola ${order.customer.name}! Te escribimos de Un Fuego por tu pedido #${order.orderNumber} para coordinar la entrega.`
+                )}
+                style={whatsappButton}
+              >
+                Contactar por WhatsApp
+              </Button>
+            )}
           </Section>
 
           <Hr style={hr} />
@@ -136,4 +148,16 @@ const totalText = {
 const hr = {
   borderColor: "#e5e5e5",
   margin: "20px 0",
+};
+
+const whatsappButton = {
+  backgroundColor: "#25D366",
+  color: "#ffffff",
+  fontSize: "14px",
+  fontWeight: "600",
+  padding: "10px 16px",
+  borderRadius: "6px",
+  textDecoration: "none",
+  display: "inline-block",
+  marginTop: "10px",
 };
