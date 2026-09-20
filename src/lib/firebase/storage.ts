@@ -1,6 +1,7 @@
 import {
   ref,
   uploadBytes,
+  uploadBytesResumable,
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
@@ -11,6 +12,34 @@ export async function uploadFile(file: File, path: string): Promise<string> {
   const storageRef = ref(getFirebaseStorage(), path);
   const snapshot = await uploadBytes(storageRef, file);
   return getDownloadURL(snapshot.ref);
+}
+
+/**
+ * Igual que `uploadFile`, pero avisa el progreso (0-100) mientras sube, para poder
+ * mostrar feedback en la UI.
+ */
+export function uploadFileWithProgress(
+  file: File,
+  path: string,
+  onProgress: (percent: number) => void
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(ref(getFirebaseStorage(), path), file);
+
+    task.on(
+      "state_changed",
+      (snapshot) => {
+        const percent = snapshot.totalBytes
+          ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+          : 0;
+        onProgress(percent);
+      },
+      reject,
+      () => {
+        getDownloadURL(task.snapshot.ref).then(resolve, reject);
+      }
+    );
+  });
 }
 
 /** Alias retrocompatible para subir imágenes. */
