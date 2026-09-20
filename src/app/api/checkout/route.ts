@@ -8,6 +8,8 @@ import {
 import { createOrder, updateOrder } from "@/lib/firebase/orders";
 import { isMercadoPagoEnabled } from "@/lib/mercadopago/settings";
 import { checkoutSchema } from "@/lib/validations/checkout";
+import { computePricing } from "@/lib/pricing";
+import { resolveAdjustments } from "@/lib/checkout/resolve-adjustments";
 import type { OrderItem } from "@/lib/types";
 
 const SHIPPING_COST = Number(process.env.SHIPPING_COST ?? 2500);
@@ -54,24 +56,44 @@ export async function POST(request: Request) {
       );
     }
 
-    const subtotal = items.reduce(
-      (sum: number, item: OrderItem) => sum + item.price * item.quantity,
-      0
-    );
-    const total = subtotal + SHIPPING_COST;
+    // Los ajustes se releen de Firestore: el body del cliente no es autoritativo.
+    const adjustments = await resolveAdjustments(items, "mercadopago");
+
+    const pricing = computePricing({
+      items: items.map((item: OrderItem) => ({
+        productId: item.productId,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      method: "mercadopago",
+      adjustments,
+      shippingCost: SHIPPING_COST,
+    });
 
     // Create order in database
-    const orderId = await createOrder(parsed.data, items, subtotal, SHIPPING_COST, total);
+    const orderId = await createOrder({
+      data: parsed.data,
+      items,
+      subtotal: pricing.subtotal,
+      shippingCost: SHIPPING_COST,
+      total: pricing.total,
+      paymentAdjustment:
+        pricing.adjustment !== 0
+          ? { amount: pricing.adjustment, label: pricing.adjustmentLabel }
+          : null,
+    });
 
     const { name, surname } = splitName(parsed.data.customer.name);
     const publicHttps = isPublicHttps(BASE_URL);
 
-    // Items de la preference: productos + un item "Envío" si corresponde.
-    const preferenceItems = items.map((item: OrderItem) => ({
-      id: item.productId,
-      title: item.name,
-      quantity: item.quantity,
-      unit_price: item.price,
+    // Items de la preference: productos + un item "Envío" si corresponde. El ajuste por
+    // medio de pago va metido en el unit_price (MercadoPago no acepta montos negativos,
+    // así que un descuento tiene que ir en el unitario igual).
+    const preferenceItems = pricing.lines.map((line, index) => ({
+      id: line.productId,
+      title: items[index].name,
+      quantity: line.quantity,
+      unit_price: line.unit,
       currency_id: "ARS",
     }));
     if (SHIPPING_COST > 0) {
@@ -82,6 +104,18 @@ export async function POST(request: Request) {
         unit_price: SHIPPING_COST,
         currency_id: "ARS",
       });
+    }
+
+    // Lo que cobra MercadoPago tiene que ser exactamente order.total. Se cumple por
+    // construcción (computePricing redondea el unitario), esto es solo el fusible.
+    const mpTotal = preferenceItems.reduce(
+      (sum, item) => sum + item.unit_price * item.quantity,
+      0
+    );
+    if (mpTotal !== pricing.total) {
+      throw new Error(
+        `Preference desalineada con la orden ${orderId}: MP ${mpTotal} vs total ${pricing.total}`
+      );
     }
 
     const expiration = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();

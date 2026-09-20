@@ -10,6 +10,7 @@ import {
 } from "@react-email/components";
 import type { Order, TransferSettings } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { orderAdjustment } from "@/lib/pricing";
 import { EmailLogoHeader } from "../EmailLogoHeader";
 
 interface TransferInstructionsEmailProps {
@@ -26,6 +27,8 @@ export function TransferInstructionsEmail({
   settings,
   trackUrl,
 }: TransferInstructionsEmailProps) {
+  const adjustment = orderAdjustment(order);
+
   return (
     <Html>
       <Head />
@@ -74,9 +77,10 @@ export function TransferInstructionsEmail({
             <Text style={summaryText}>
               Subtotal: {formatCurrency(order.subtotal)}
             </Text>
-            {!!order.discount && order.discount > 0 && (
+            {adjustment && (
               <Text style={summaryText}>
-                Descuento: −{formatCurrency(order.discount)}
+                {adjustment.label}: {adjustment.amount < 0 ? "−" : "+"}
+                {formatCurrency(Math.abs(adjustment.amount))}
               </Text>
             )}
             {order.shippingCost > 0 && (

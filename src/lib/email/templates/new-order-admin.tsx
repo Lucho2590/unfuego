@@ -10,12 +10,15 @@ import {
 } from "@react-email/components";
 import type { Order } from "@/lib/types";
 import { formatCurrency, formatPhone, whatsappLink } from "@/lib/utils";
+import { orderAdjustment } from "@/lib/pricing";
 
 interface NewOrderAdminEmailProps {
   order: Order;
 }
 
 export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
+  const adjustment = orderAdjustment(order);
+
   return (
     <Html>
       <Head />
@@ -82,6 +85,12 @@ export function NewOrderAdminEmail({ order }: NewOrderAdminEmailProps) {
             <Text style={summaryText}>
               Subtotal: {formatCurrency(order.subtotal)}
             </Text>
+            {adjustment && (
+              <Text style={summaryText}>
+                {adjustment.label}: {adjustment.amount < 0 ? "−" : "+"}
+                {formatCurrency(Math.abs(adjustment.amount))}
+              </Text>
+            )}
             {order.shippingCost > 0 && (
               <Text style={summaryText}>
                 Envío: {formatCurrency(order.shippingCost)}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { revalidateTag } from "next/cache";
 import { verifySession, fsAdd, fsUpdate, fsDelete } from "@/lib/firebase/admin";
+import { sanitizePaymentAdjustments } from "@/lib/pricing";
 
 async function verifyAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
       discountValue:
         body.discountValue == null ? null : Number(body.discountValue),
       discountDescription: body.discountDescription ?? null,
+      paymentAdjustments: sanitizePaymentAdjustments(body.paymentAdjustments),
     });
 
     revalidateTag("products", "max");
@@ -71,6 +73,8 @@ export async function PUT(request: Request) {
       discountValue:
         data.discountValue == null ? null : Number(data.discountValue),
       discountDescription: data.discountDescription ?? null,
+      // Después del spread a propósito: `data` viene del cliente sin validar.
+      paymentAdjustments: sanitizePaymentAdjustments(data.paymentAdjustments),
     });
 
     revalidateTag("products", "max");

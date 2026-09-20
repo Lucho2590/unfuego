@@ -2,18 +2,24 @@
 
 import { useCartStore } from "@/lib/store/cart";
 import { formatCurrency } from "@/lib/utils";
-
-const SHIPPING_COST = Number(process.env.NEXT_PUBLIC_SHIPPING_COST ?? 0);
+import { PUBLIC_SHIPPING_COST, type PricingResult } from "@/lib/pricing";
 
 interface CartSummaryProps {
-  /** % de descuento a aplicar sobre el subtotal (ej. transferencia). 0 = sin descuento. */
-  discountPercent?: number;
+  /**
+   * Resultado de `computePricing` para el medio de pago elegido. Sin esto (el caso del
+   * cart drawer) se muestra el precio base: los ajustes por medio de pago solo se ven
+   * en el checkout.
+   */
+  pricing?: PricingResult;
 }
 
-export function CartSummary({ discountPercent = 0 }: CartSummaryProps) {
-  const subtotal = useCartStore((s) => s.getSubtotal());
-  const discount = discountPercent > 0 ? Math.round((subtotal * discountPercent) / 100) : 0;
-  const total = subtotal - discount + SHIPPING_COST;
+export function CartSummary({ pricing }: CartSummaryProps) {
+  const storeSubtotal = useCartStore((s) => s.getSubtotal());
+
+  const subtotal = pricing?.subtotal ?? storeSubtotal;
+  const adjustment = pricing?.adjustment ?? 0;
+  const shippingCost = pricing?.shippingCost ?? PUBLIC_SHIPPING_COST;
+  const total = pricing?.total ?? storeSubtotal + PUBLIC_SHIPPING_COST;
 
   return (
     <div className="space-y-2 pt-3 border-t border-border">
@@ -21,10 +27,23 @@ export function CartSummary({ discountPercent = 0 }: CartSummaryProps) {
         <span className="text-muted-foreground">Subtotal</span>
         <span>{formatCurrency(subtotal)}</span>
       </div>
-      {discount > 0 && (
-        <div className="flex justify-between text-sm text-green-600">
-          <span>Descuento transferencia ({discountPercent}%)</span>
-          <span>−{formatCurrency(discount)}</span>
+      {adjustment !== 0 && (
+        <div
+          className={`flex justify-between text-sm ${
+            adjustment < 0 ? "text-green-600" : "text-muted-foreground"
+          }`}
+        >
+          <span>{pricing?.adjustmentLabel}</span>
+          <span>
+            {adjustment < 0 ? "−" : "+"}
+            {formatCurrency(Math.abs(adjustment))}
+          </span>
+        </div>
+      )}
+      {shippingCost > 0 && (
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Envío</span>
+          <span>{formatCurrency(shippingCost)}</span>
         </div>
       )}
       <div className="flex justify-between text-sm font-medium pt-2 border-t border-border">
