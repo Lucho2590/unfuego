@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { UpdateOrderStatus } from "@/components/admin/UpdateOrderStatus";
 import { ReviewTransfer } from "@/components/admin/ReviewTransfer";
 import { formatCurrency, formatPhone, telHref, whatsappLink } from "@/lib/utils";
+import { orderAdjustment } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,8 @@ export default async function OrderDetailPage({ params }: Props) {
   if (!order) {
     notFound();
   }
+
+  const adjustment = orderAdjustment(order);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -106,10 +109,17 @@ export default async function OrderDetailPage({ params }: Props) {
             <span className="text-muted-foreground">Subtotal</span>
             <span>{formatCurrency(order.subtotal)}</span>
           </div>
-          {!!order.discount && order.discount > 0 && (
-            <div className="flex justify-between text-sm text-green-600">
-              <span>Descuento</span>
-              <span>−{formatCurrency(order.discount)}</span>
+          {adjustment && (
+            <div
+              className={`flex justify-between text-sm ${
+                adjustment.amount < 0 ? "text-green-600" : "text-muted-foreground"
+              }`}
+            >
+              <span>{adjustment.label}</span>
+              <span>
+                {adjustment.amount < 0 ? "−" : "+"}
+                {formatCurrency(Math.abs(adjustment.amount))}
+              </span>
             </div>
           )}
           <div className="flex justify-between text-sm">

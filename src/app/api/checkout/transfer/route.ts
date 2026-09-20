@@ -3,6 +3,8 @@ import { createTransferOrder, getOrderById, updateOrder } from "@/lib/firebase/o
 import { checkoutSchema } from "@/lib/validations/checkout";
 import { getTransferSettings } from "@/lib/transfer/settings";
 import { sendTransferInstructions, sendTransferAdminNotification } from "@/lib/email/send";
+import { computePricing } from "@/lib/pricing";
+import { resolveAdjustments } from "@/lib/checkout/resolve-adjustments";
 import type { Order, OrderItem } from "@/lib/types";
 
 const SHIPPING_COST = Number(process.env.SHIPPING_COST ?? 2500);
@@ -33,21 +35,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const subtotal = items.reduce(
-      (sum: number, item: OrderItem) => sum + item.price * item.quantity,
-      0
-    );
-    const discount = Math.round((subtotal * settings.discountPercent) / 100);
-    const total = subtotal - discount + SHIPPING_COST;
+    // Los ajustes se releen de Firestore: el body del cliente no es autoritativo.
+    const adjustments = await resolveAdjustments(items, "transfer");
 
-    const orderId = await createTransferOrder(
-      parsed.data,
+    const pricing = computePricing({
+      items: items.map((item: OrderItem) => ({
+        productId: item.productId,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      method: "transfer",
+      adjustments,
+      // Fallback para los productos sin ajuste propio de transferencia.
+      transferDiscountPercent: settings.discountPercent,
+      shippingCost: SHIPPING_COST,
+    });
+
+    const orderId = await createTransferOrder({
+      data: parsed.data,
       items,
-      subtotal,
-      SHIPPING_COST,
-      total,
-      discount
-    );
+      subtotal: pricing.subtotal,
+      shippingCost: SHIPPING_COST,
+      total: pricing.total,
+      paymentAdjustment:
+        pricing.adjustment !== 0
+          ? { amount: pricing.adjustment, label: pricing.adjustmentLabel }
+          : null,
+    });
 
     // Emails (no bloquean el checkout si fallan).
     try {

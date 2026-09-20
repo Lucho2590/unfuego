@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/firebase/products";
 import { getAllSections } from "@/lib/firebase/sections";
+import { getTransferSettings } from "@/lib/transfer/settings";
 import { ProductForm } from "@/components/admin/ProductForm";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,10 @@ interface Props {
 
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
-  const [product, sections] = await Promise.all([
+  const [product, sections, transfer] = await Promise.all([
     getProductById(id),
     getAllSections(),
+    getTransferSettings(),
   ]);
 
   if (!product) {
@@ -23,7 +25,11 @@ export default async function EditProductPage({ params }: Props) {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-light">Editar producto</h1>
-      <ProductForm product={product} sections={sections} />
+      <ProductForm
+        product={product}
+        sections={sections}
+        transferDiscountPercent={transfer.discountPercent}
+      />
     </div>
   );
 }

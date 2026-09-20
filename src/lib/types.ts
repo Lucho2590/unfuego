@@ -17,11 +17,25 @@ export interface Product {
   discountType?: DiscountType | null; // tipo de descuento manual; null = sin descuento
   discountValue?: number | null; // % (0-100) o monto en $ según discountType
   discountDescription?: string | null; // ej. "Por día del padre"
+  // Ajuste de precio por medio de pago. Si un medio tiene ajuste definido, PISA el
+  // descuento global de transferencia para este producto. Ausente/null = sin ajuste.
+  paymentAdjustments?: Partial<Record<PaymentProvider, PaymentAdjustment | null>> | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export type DiscountType = "percentage" | "fixed";
+
+// ─── Ajuste de precio por medio de pago (configurado por producto) ───
+
+export type PaymentAdjustmentMode = "surcharge" | "discount";
+
+export interface PaymentAdjustment {
+  mode: PaymentAdjustmentMode; // recargo (suma) | descuento (resta)
+  type: DiscountType; // "percentage" (0-100) | "fixed" (monto en ARS)
+  value: number; // siempre positivo; el signo lo da `mode`
+  description?: string | null; // ej. "Recargo por financiación"
+}
 
 export interface Section {
   id: string;
@@ -93,8 +107,11 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   shippingCost: number;
-  // Descuento aplicado en ARS (ej. por pagar con transferencia). Opcional.
+  // Legacy: descuento aplicado en ARS (positivo). Se sigue escribiendo como espejo de
+  // `paymentAdjustment` cuando este es negativo, para no romper órdenes/lectores viejos.
   discount?: number;
+  // Ajuste por medio de pago, CON SIGNO: >0 recargo, <0 descuento. null = sin ajuste.
+  paymentAdjustment?: { amount: number; label: string } | null;
   total: number;
   // Opcional: las órdenes de transferencia no usan MercadoPago.
   mercadopago?: {

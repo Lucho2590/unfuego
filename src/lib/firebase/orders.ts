@@ -25,13 +25,26 @@ async function getNextOrderNumber(): Promise<string> {
   return `UF-${String(next).padStart(4, "0")}`;
 }
 
-export async function createOrder(
-  data: CheckoutFormData,
-  items: OrderItem[],
-  subtotal: number,
-  shippingCost: number,
-  total: number
-): Promise<string> {
+export interface CreateOrderInput {
+  data: CheckoutFormData;
+  items: OrderItem[];
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  /** Ajuste por medio de pago, con signo (>0 recargo, <0 descuento). */
+  paymentAdjustment?: { amount: number; label: string } | null;
+}
+
+/**
+ * Espejo del campo legacy `discount` (positivo = monto descontado), para que los
+ * lectores viejos de órdenes sigan funcionando.
+ */
+function legacyDiscount(adjustment?: { amount: number } | null): number {
+  return adjustment && adjustment.amount < 0 ? -adjustment.amount : 0;
+}
+
+export async function createOrder(input: CreateOrderInput): Promise<string> {
+  const { data, items, subtotal, shippingCost, total, paymentAdjustment } = input;
   const orderNumber = await getNextOrderNumber();
 
   const order = {
@@ -42,6 +55,8 @@ export async function createOrder(
     items,
     subtotal,
     shippingCost,
+    paymentAdjustment: paymentAdjustment ?? null,
+    discount: legacyDiscount(paymentAdjustment),
     total,
     mercadopago: {
       preferenceId: "",
@@ -60,14 +75,8 @@ export async function createOrder(
  * Queda en paymentStatus "pending" hasta que el comprador suba el comprobante
  * (→ "processing") y el admin confirme (→ "completed").
  */
-export async function createTransferOrder(
-  data: CheckoutFormData,
-  items: OrderItem[],
-  subtotal: number,
-  shippingCost: number,
-  total: number,
-  discount: number
-): Promise<string> {
+export async function createTransferOrder(input: CreateOrderInput): Promise<string> {
+  const { data, items, subtotal, shippingCost, total, paymentAdjustment } = input;
   const orderNumber = await getNextOrderNumber();
 
   const order = {
@@ -80,7 +89,8 @@ export async function createTransferOrder(
     items,
     subtotal,
     shippingCost,
-    discount,
+    paymentAdjustment: paymentAdjustment ?? null,
+    discount: legacyDiscount(paymentAdjustment),
     total,
     bankTransfer: {
       // Token de acceso: solo se envía en el link del email.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { isValidPhoneNumber } from "react-phone-number-input";
 import { useCartStore } from "@/lib/store/cart";
@@ -14,8 +14,13 @@ import { CartSummary } from "@/components/cart/CartSummary";
 import { toast } from "sonner";
 import Image from "next/image";
 import { cn, formatCurrency } from "@/lib/utils";
+import { computePricing, PUBLIC_SHIPPING_COST } from "@/lib/pricing";
+import type { PaymentAdjustment, PaymentProvider } from "@/lib/types";
 
-type PaymentMethod = "mercadopago" | "transfer";
+type PaymentMethod = PaymentProvider;
+
+/** Ajustes de un producto, por medio de pago, tal como los devuelve el endpoint. */
+type ProductAdjustments = Partial<Record<PaymentProvider, PaymentAdjustment | null>>;
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -29,6 +34,39 @@ export function CheckoutForm() {
     enabled: false,
     discountPercent: 0,
   });
+
+  const [adjustments, setAdjustments] = useState<Record<string, ProductAdjustments>>({});
+
+  // Clave por composición del carrito: refetch al agregar/quitar productos, no al
+  // cambiar cantidades (los ajustes son por producto).
+  const idsKey = items
+    .map((item) => item.productId)
+    .sort()
+    .join(",");
+
+  useEffect(() => {
+    if (!idsKey) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/products/payment-adjustments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: idsKey.split(",") }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setAdjustments(data.adjustments ?? {});
+      } catch {
+        // Sin ajustes: el server recalcula el total antes de cobrar igual.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [idsKey]);
 
   useEffect(() => {
     (async () => {
@@ -53,6 +91,34 @@ export function CheckoutForm() {
       }
     })();
   }, []);
+
+  const useTransfer = method === "transfer" && transfer.enabled;
+
+  const pricingFor = useMemo(() => {
+    const lines = items.map((item) => ({
+      productId: item.productId,
+      price: item.price,
+      quantity: item.quantity,
+    }));
+
+    return (provider: PaymentProvider) =>
+      computePricing({
+        items: lines,
+        method: provider,
+        adjustments: Object.fromEntries(
+          Object.entries(adjustments).map(([id, byMethod]) => [
+            id,
+            byMethod?.[provider] ?? null,
+          ])
+        ),
+        transferDiscountPercent: transfer.discountPercent,
+        shippingCost: PUBLIC_SHIPPING_COST,
+      });
+  }, [items, adjustments, transfer.discountPercent]);
+
+  const pricing = pricingFor(useTransfer ? "transfer" : "mercadopago");
+  // Para el hint del botón: cuánto cambia el carrito si se paga por transferencia.
+  const transferDelta = pricingFor("transfer").adjustment;
 
   const [form, setForm] = useState({
     name: "",
@@ -105,7 +171,6 @@ export function CheckoutForm() {
       })),
     };
 
-    const useTransfer = method === "transfer" && transfer.enabled;
     const endpoint = useTransfer ? "/api/checkout/transfer" : "/api/checkout";
 
     try {
@@ -250,11 +315,7 @@ export function CheckoutForm() {
             ))}
           </div>
 
-          <CartSummary
-            discountPercent={
-              method === "transfer" && transfer.enabled ? transfer.discountPercent : 0
-            }
-          />
+          <CartSummary pricing={pricing} />
 
           {/* Método de pago: selector solo si hay más de una opción disponible */}
           {mpAvailable && transfer.enabled && (
@@ -284,7 +345,10 @@ export function CheckoutForm() {
                   )}
                 >
                   Transferencia
-                  {transfer.discountPercent > 0 && ` (−${transfer.discountPercent}%)`}
+                  {transferDelta !== 0 &&
+                    ` (${transferDelta < 0 ? "−" : "+"}${formatCurrency(
+                      Math.abs(transferDelta)
+                    )})`}
                 </button>
               </div>
             </div>
@@ -304,7 +368,7 @@ export function CheckoutForm() {
           >
             {loading
               ? "Procesando..."
-              : method === "transfer" && transfer.enabled
+              : useTransfer
                 ? "Continuar con transferencia"
                 : "Pagar con MercadoPago"}
           </Button>

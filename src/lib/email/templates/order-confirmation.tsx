@@ -9,6 +9,7 @@ import {
 } from "@react-email/components";
 import type { Order } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { orderAdjustment } from "@/lib/pricing";
 import { EmailLogoHeader } from "../EmailLogoHeader";
 
 interface OrderConfirmationEmailProps {
@@ -16,6 +17,8 @@ interface OrderConfirmationEmailProps {
 }
 
 export function OrderConfirmationEmail({ order }: OrderConfirmationEmailProps) {
+  const adjustment = orderAdjustment(order);
+
   return (
     <Html>
       <Head />
@@ -53,6 +56,12 @@ export function OrderConfirmationEmail({ order }: OrderConfirmationEmailProps) {
             <Text style={summaryText}>
               Subtotal: {formatCurrency(order.subtotal)}
             </Text>
+            {adjustment && (
+              <Text style={summaryText}>
+                {adjustment.label}: {adjustment.amount < 0 ? "−" : "+"}
+                {formatCurrency(Math.abs(adjustment.amount))}
+              </Text>
+            )}
             {order.shippingCost > 0 && (
               <Text style={summaryText}>
                 Envío: {formatCurrency(order.shippingCost)}
