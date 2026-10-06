@@ -8,7 +8,12 @@ import { toast } from "sonner";
 import {
   uploadFileWithProgress,
   getProductImagePath,
+  IMMUTABLE_CACHE,
 } from "@/lib/firebase/storage";
+import { compressQueued } from "@/lib/images/compress";
+
+/** Una foto de cámara puede pesar 15 MB tranquilamente; más que esto es un archivo raro. */
+const MAX_MB = 25;
 
 interface ImageUploaderProps {
   productId: string;
@@ -23,7 +28,8 @@ interface PendingUpload {
   /** `blob:` local, para mostrar la miniatura al instante sin esperar a Storage. */
   previewUrl: string;
   progress: number;
-  status: "uploading" | "error";
+  /** "processing" = comprimiendo en el browser, todavía no empezó a subir. */
+  status: "processing" | "uploading" | "error";
 }
 
 export function ImageUploader({
@@ -52,10 +58,21 @@ export function ImageUploader({
     };
   }, []);
 
-  const isUploading = pending.some((item) => item.status === "uploading");
+  const isBusy = pending.some((item) => item.status !== "error");
 
   const runUpload = useCallback(
     async (item: PendingUpload): Promise<string | null> => {
+      setPending((prev) =>
+        prev.map((p) =>
+          p.id === item.id ? { ...p, status: "processing", progress: 0 } : p
+        )
+      );
+
+      // Se achica y se pasa a WebP acá, en el browser: si subiéramos el JPEG crudo de la
+      // cámara (3-12 MB), después el optimizer tendría que bajar ese archivo entero de
+      // Storage en cada transformación. Si la compresión falla devuelve el original.
+      const { file: toUpload } = await compressQueued(item.file);
+
       setPending((prev) =>
         prev.map((p) =>
           p.id === item.id ? { ...p, status: "uploading", progress: 0 } : p
@@ -64,14 +81,18 @@ export function ImageUploader({
 
       const path = getProductImagePath(
         productId,
-        `${Date.now()}-${item.file.name}`
+        `${Date.now()}-${toUpload.name}`
       );
 
       try {
-        const url = await uploadFileWithProgress(item.file, path, (progress) =>
-          setPending((prev) =>
-            prev.map((p) => (p.id === item.id ? { ...p, progress } : p))
-          )
+        const url = await uploadFileWithProgress(
+          toUpload,
+          path,
+          (progress) =>
+            setPending((prev) =>
+              prev.map((p) => (p.id === item.id ? { ...p, progress } : p))
+            ),
+          { ...IMMUTABLE_CACHE, contentType: toUpload.type }
         );
         setPending((prev) => prev.filter((p) => p.id !== item.id));
         URL.revokeObjectURL(item.previewUrl);
@@ -106,12 +127,30 @@ export function ImageUploader({
       e.target.value = "";
       if (files.length === 0) return;
 
-      const items: PendingUpload[] = files.map((file, index) => ({
+      // HEIC no lo puede decodificar ningún browser ni el optimizer: si lo dejáramos pasar,
+      // la compresión falla, se sube el original y queda una imagen que no se ve en la tienda.
+      const validos = files.filter(
+        (file) =>
+          file.type.startsWith("image/") &&
+          !/heic|heif/i.test(file.type) &&
+          file.size <= MAX_MB * 1024 * 1024
+      );
+      const rechazados = files.length - validos.length;
+      if (rechazados > 0) {
+        toast.error(
+          `No se pudieron agregar ${rechazados} archivo(s): tienen que ser imágenes ` +
+            `JPG, PNG o WebP de hasta ${MAX_MB}MB. Si son fotos de iPhone en HEIC, cambiá ` +
+            `Ajustes > Cámara > Formatos a "Más compatible".`
+        );
+      }
+      if (validos.length === 0) return;
+
+      const items: PendingUpload[] = validos.map((file, index) => ({
         id: `${Date.now()}-${index}-${file.name}`,
         file,
         previewUrl: URL.createObjectURL(file),
         progress: 0,
-        status: "uploading",
+        status: "processing",
       }));
       setPending((prev) => [...prev, ...items]);
 
@@ -153,13 +192,13 @@ export function ImageUploader({
             <Reorder.Item
               key={url}
               value={url}
-              className="relative w-24 h-24 shrink-0 rounded-md overflow-hidden border border-border group cursor-grab active:cursor-grabbing"
+              className="relative w-24 h-24 shrink-0 rounded-md overflow-hidden border border-border bg-product-surface group cursor-grab active:cursor-grabbing"
             >
               <Image
                 src={url}
                 alt={`Imagen ${index + 1}`}
                 fill
-                className="object-cover pointer-events-none select-none"
+                className="object-contain p-1 pointer-events-none select-none"
                 sizes="96px"
                 draggable={false}
               />
@@ -181,27 +220,30 @@ export function ImageUploader({
         </Reorder.Group>
 
         {pending.map((item) =>
-          item.status === "uploading" ? (
+          item.status !== "error" ? (
             <div
               key={item.id}
-              className="relative w-24 h-24 shrink-0 rounded-md overflow-hidden border border-border"
+              className="relative w-24 h-24 shrink-0 rounded-md overflow-hidden border border-border bg-product-surface"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.previewUrl}
                 alt={item.file.name}
-                className="absolute inset-0 w-full h-full object-cover opacity-30"
+                className="absolute inset-0 w-full h-full object-contain p-1 opacity-30"
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/40">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                {/* Comprimir no tiene progreso medible: solo el spinner y el cartel. */}
                 <span className="text-[10px] text-muted-foreground tabular-nums">
-                  {item.progress}%
+                  {item.status === "processing" ? "Optimizando" : `${item.progress}%`}
                 </span>
               </div>
-              <div
-                className="absolute bottom-0 left-0 h-1 bg-primary transition-[width] duration-200"
-                style={{ width: `${item.progress}%` }}
-              />
+              {item.status === "uploading" && (
+                <div
+                  className="absolute bottom-0 left-0 h-1 bg-primary transition-[width] duration-200"
+                  style={{ width: `${item.progress}%` }}
+                />
+              )}
             </div>
           ) : (
             <div
@@ -212,7 +254,7 @@ export function ImageUploader({
               <img
                 src={item.previewUrl}
                 alt={item.file.name}
-                className="absolute inset-0 w-full h-full object-cover opacity-20"
+                className="absolute inset-0 w-full h-full object-contain p-1 opacity-20"
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/60 px-1 text-center">
                 <span className="text-[10px] text-red-500 leading-tight">
@@ -241,18 +283,18 @@ export function ImageUploader({
 
         <label
           className={`w-24 h-24 shrink-0 rounded-md border border-dashed border-border flex flex-col items-center justify-center transition-colors ${
-            isUploading
+            isBusy
               ? "cursor-not-allowed opacity-60"
               : "cursor-pointer hover:border-primary/50"
           }`}
         >
-          {isUploading ? (
+          {isBusy ? (
             <Loader2 className="w-5 h-5 text-muted-foreground mb-1 animate-spin" />
           ) : (
             <Upload className="w-5 h-5 text-muted-foreground mb-1" />
           )}
           <span className="text-xs text-muted-foreground">
-            {isUploading ? "Subiendo" : "Subir"}
+            {isBusy ? "Procesando" : "Subir"}
           </span>
           <input
             type="file"
@@ -260,7 +302,7 @@ export function ImageUploader({
             multiple
             onChange={handleUpload}
             className="hidden"
-            disabled={isUploading}
+            disabled={isBusy}
           />
         </label>
       </div>

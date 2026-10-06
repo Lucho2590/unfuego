@@ -192,6 +192,9 @@ export function ProductForm({
 }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  // Un producto nuevo todavía no tiene id, y los uploaders necesitan una carpeta en Storage.
+  // Sin esto todos los productos nuevos compartían `products/new/`.
+  const [draftId] = useState(() => `draft-${crypto.randomUUID()}`);
   const isEditing = !!product;
 
   const [form, setForm] = useState({
@@ -572,7 +575,7 @@ export function ProductForm({
       <div className="space-y-2">
         <Label>Imágenes</Label>
         <ImageUploader
-          productId={product?.id ?? "new"}
+          productId={product?.id ?? draftId}
           images={form.images}
           onImagesChange={(images) => updateField("images", images)}
         />
@@ -581,7 +584,7 @@ export function ProductForm({
       <div className="space-y-2">
         <Label>Manual de armado (PDF)</Label>
         <PdfUploader
-          productId={product?.id ?? "new"}
+          productId={product?.id ?? draftId}
           manualUrl={form.manualUrl}
           onChange={(url) => updateField("manualUrl", url)}
         />

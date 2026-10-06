@@ -13,6 +13,7 @@ import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { toast } from "sonner";
 import Image from "next/image";
+import { ImagePlaceholder } from "@/components/common/ImagePlaceholder";
 import { cn, formatCurrency } from "@/lib/utils";
 import { computePricing, PUBLIC_SHIPPING_COST } from "@/lib/pricing";
 import type { PaymentAdjustment, PaymentProvider } from "@/lib/types";
@@ -291,15 +292,17 @@ export function CheckoutForm() {
           <div className="divide-y divide-border">
             {items.map((item) => (
               <div key={item.productId} className="flex gap-3 py-3">
-                <div className="relative w-12 h-12 rounded bg-muted overflow-hidden flex-shrink-0">
-                  {item.image && (
+                <div className="relative w-12 h-12 rounded bg-product-surface overflow-hidden flex-shrink-0">
+                  {item.image ? (
                     <Image
                       src={item.image}
                       alt={item.name}
                       fill
-                      className="object-cover"
+                      className="object-contain p-1"
                       sizes="48px"
                     />
+                  ) : (
+                    <ImagePlaceholder className="absolute inset-0" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
