@@ -4,13 +4,26 @@ import {
   uploadBytesResumable,
   getDownloadURL,
   deleteObject,
+  type UploadMetadata,
 } from "firebase/storage";
 import { getFirebaseStorage } from "./config";
 
+/**
+ * Metadata para archivos que nunca se pisan (el path lleva un timestamp). El default de
+ * Storage es `private, max-age=0`, que obliga a revalidar en cada fetch.
+ */
+export const IMMUTABLE_CACHE: UploadMetadata = {
+  cacheControl: "public, max-age=31536000, immutable",
+};
+
 /** Sube cualquier archivo (imagen, PDF, etc.) a Storage y devuelve su URL pública. */
-export async function uploadFile(file: File, path: string): Promise<string> {
+export async function uploadFile(
+  file: File,
+  path: string,
+  metadata?: UploadMetadata
+): Promise<string> {
   const storageRef = ref(getFirebaseStorage(), path);
-  const snapshot = await uploadBytes(storageRef, file);
+  const snapshot = await uploadBytes(storageRef, file, metadata);
   return getDownloadURL(snapshot.ref);
 }
 
@@ -21,10 +34,11 @@ export async function uploadFile(file: File, path: string): Promise<string> {
 export function uploadFileWithProgress(
   file: File,
   path: string,
-  onProgress: (percent: number) => void
+  onProgress: (percent: number) => void,
+  metadata?: UploadMetadata
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(ref(getFirebaseStorage(), path), file);
+    const task = uploadBytesResumable(ref(getFirebaseStorage(), path), file, metadata);
 
     task.on(
       "state_changed",

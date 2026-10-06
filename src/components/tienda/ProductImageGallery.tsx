@@ -3,12 +3,18 @@
 import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { ImagePlaceholder } from "@/components/common/ImagePlaceholder";
 import { ProductImageLightbox } from "./ProductImageLightbox";
 
 interface ProductImageGalleryProps {
   images: string[];
   productName: string;
 }
+
+// La galería ocupa media columna de un `max-w-5xl`, así que arriba de 1152px nunca pasa de
+// 488px. El `50vw` de antes hacía pedir variantes del doble de lo necesario.
+const GALLERY_SIZES =
+  "(min-width: 1152px) 488px, (min-width: 1024px) calc(50vw - 88px), (min-width: 768px) calc(50vw - 80px), calc(100vw - 48px)";
 
 export function ProductImageGallery({
   images,
@@ -18,18 +24,7 @@ export function ProductImageGallery({
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (images.length === 0) {
-    return (
-      <div className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden">
-        <Image
-          src="/images/placeholder.jpg"
-          alt={productName}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 50vw"
-          priority
-        />
-      </div>
-    );
+    return <ImagePlaceholder className="aspect-square w-full rounded-lg" />;
   }
 
   return (
@@ -37,15 +32,17 @@ export function ProductImageGallery({
       <button
         type="button"
         onClick={() => setLightboxOpen(true)}
-        className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden cursor-zoom-in"
+        className="relative aspect-square w-full bg-product-surface rounded-lg overflow-hidden cursor-zoom-in"
         aria-label={`Ampliar imagen de ${productName}`}
       >
+        {/* `object-contain`: la foto se ve entera, sin recortar los bordes. El padding va en
+            el <img> — con border-box achica la content box que `contain` usa de referencia. */}
         <Image
           src={images[selectedIndex]}
           alt={`${productName} - imagen ${selectedIndex + 1}`}
           fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-contain p-4"
+          sizes={GALLERY_SIZES}
           priority
         />
       </button>
@@ -57,7 +54,7 @@ export function ProductImageGallery({
               key={index}
               onClick={() => setSelectedIndex(index)}
               className={cn(
-                "relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border-2 transition-colors",
+                "relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border-2 transition-colors bg-product-surface",
                 index === selectedIndex
                   ? "border-primary"
                   : "border-transparent hover:border-border"
@@ -67,7 +64,7 @@ export function ProductImageGallery({
                 src={image}
                 alt={`${productName} - miniatura ${index + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain p-1"
                 sizes="64px"
               />
             </button>

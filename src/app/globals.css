@@ -15,6 +15,7 @@
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
+  --color-product-surface: var(--product-surface);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-card-foreground: var(--card-foreground);
@@ -42,6 +43,11 @@
 
   --muted: oklch(0.18 0 0);
   --muted-foreground: oklch(0.55 0 0);
+
+  /* Marco de las fotos de producto. Como las mostramos con `object-contain` (sin recortar),
+     las fotos que no son cuadradas dejan barras de este color a los costados. Vive en su
+     propio token para poder cambiarlo en un solo lugar si el catálogo cambia de estilo. */
+  --product-surface: oklch(0.18 0 0);
 
   --accent: oklch(0.60 0.20 35);
   --accent-foreground: oklch(0.98 0 0);

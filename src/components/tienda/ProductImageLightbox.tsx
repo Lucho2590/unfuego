@@ -74,14 +74,16 @@ export function ProductImageLightbox({
           </Dialog.Title>
 
           <div className="relative h-full w-full max-h-[90vh] max-w-5xl mx-auto p-4">
+            {/* Sin `key`: con key React destruye y remonta el <img> en cada cambio de slide y
+                queda un frame en blanco; sin key solo cambia el src y el browser mantiene la
+                imagen anterior hasta que la nueva está lista. Sin `priority` tampoco: esto vive
+                en un modal cerrado y el preload competía con el LCP de la ficha. */}
             <Image
-              key={index}
               src={images[index]}
               alt={`${productName} - imagen ${index + 1}`}
               fill
               className="object-contain"
-              sizes="100vw"
-              priority
+              sizes="(min-width: 1024px) 992px, 100vw"
             />
           </div>
 

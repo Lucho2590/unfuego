@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test 'src/**/*.test.ts'"
+    "test": "node --test 'src/**/*.test.ts'",
+    "images:recompress": "node --env-file=.env.local scripts/recompress-product-images.mts"
   },
   "dependencies": {
     "@react-email/components": "^1.0.12",
