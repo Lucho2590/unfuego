@@ -18,6 +18,11 @@
   --color-product-surface: var(--product-surface);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-destructive: var(--destructive);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --radius-sm: calc(var(--radius) - 4px);
@@ -36,6 +41,14 @@
 
   --card: oklch(0.12 0 0);
   --card-foreground: oklch(0.95 0 0);
+
+  /* Superficies flotantes (toasts, menús) y botones secundarios. Los componentes de shadcn
+     (button, badge, sonner) referencian estos tokens: sin ellos quedan sin fondo. */
+  --popover: oklch(0.14 0 0);
+  --popover-foreground: oklch(0.95 0 0);
+  --secondary: oklch(0.18 0 0);
+  --secondary-foreground: oklch(0.95 0 0);
+  --destructive: oklch(0.577 0.245 27.3);
 
   /* Acentos de fuego - naranja/ember */
   --primary: oklch(0.65 0.18 45);

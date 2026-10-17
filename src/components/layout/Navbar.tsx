@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { CartIcon } from "@/components/cart/CartIcon";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { useCartStore } from "@/lib/store/cart";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -17,7 +18,8 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const [cartOpen, setCartOpen] = useState(false);
+  const cartOpen = useCartStore((s) => s.isOpen);
+  const setCartOpen = useCartStore((s) => s.setOpen);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Don't render navbar on admin routes

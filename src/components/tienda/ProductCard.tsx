@@ -5,106 +5,124 @@ import { cn, formatCurrency, getProductPrice } from "@/lib/utils";
 import { ImagePlaceholder } from "@/components/common/ImagePlaceholder";
 import { AddToCartButton } from "./AddToCartButton";
 
-// Anchos reales de la columna: la grilla es 1/2/3 columnas dentro de un `max-w-6xl`, así que
-// arriba de 1280px la card nunca pasa de 368px. Declararlo evita que el browser se pida
-// variantes de 1080/1920 para un hueco de 368.
+// Anchos reales de la columna: la grilla es 2/3/4 columnas dentro de un `max-w-6xl` con
+// padding lateral de 24px (mobile) o 64px (md+) y gap de 12/16/24px. Arriba de 1280px la
+// card nunca pasa de 270px. Sin esto, `fill` pide la imagen al ancho del viewport.
 const CARD_SIZES =
-  "(min-width: 1280px) 368px, (min-width: 1024px) calc(33.3vw - 59px), (min-width: 768px) calc(50vw - 76px), (min-width: 640px) calc(50vw - 36px), calc(100vw - 48px)";
+  "(min-width: 1280px) 270px, (min-width: 1024px) calc(25vw - 50px), (min-width: 768px) calc(33.3vw - 53px), (min-width: 640px) calc(50vw - 32px), calc(50vw - 30px)";
 
 interface ProductCardProps {
   product: Product;
-  /** Las primeras tarjetas son el LCP de la tienda: se precargan en vez de ir lazy. */
+  categoryName?: string;
   priority?: boolean;
 }
 
-export function ProductCard({ product, priority = false }: ProductCardProps) {
+function StatusPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="absolute top-2 left-2 z-10 rounded-full bg-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
+      {children}
+    </span>
+  );
+}
+
+export function ProductCard({
+  product,
+  categoryName,
+  priority = false,
+}: ProductCardProps) {
   const mainImage = product.images?.[0];
   const priceInfo = getProductPrice(product);
   const comingSoon = !!product.comingSoon;
+  const outOfStock = !comingSoon && product.stock <= 0;
+  const interactive = !comingSoon;
 
-  const image = mainImage ? (
-    <div className="relative aspect-square bg-product-surface overflow-hidden">
-      <Image
-        src={mainImage}
-        alt={product.name}
-        fill
-        // `object-contain` + padding: la foto entra entera, nunca se recorta el producto.
-        // El padding va en el <img> (con border-box, achica la content box que usa contain)
-        // y de paso hace de colchón para el scale del hover.
-        className={cn(
-          "object-contain p-3 transition-transform duration-300",
-          !comingSoon && "group-hover:scale-105"
-        )}
-        sizes={CARD_SIZES}
-        quality={70}
-        priority={priority}
-      />
-    </div>
-  ) : (
-    <ImagePlaceholder className="aspect-square" />
-  );
-
-  return (
-    <div className="group flex h-full flex-col rounded-lg border border-border/50 bg-card overflow-hidden transition-colors hover:border-border">
-      {/* Los productos "Próximamente" no tienen ficha: no son clickeables. */}
-      {comingSoon ? (
-        image
-      ) : (
-        <Link href={`/tienda/${product.slug}`} className="block">
-          {image}
-        </Link>
-      )}
-
-      <div className="p-4 flex flex-1 flex-col">
-        {comingSoon ? (
-          <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
+  const content = (
+    <>
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-product-surface">
+        {mainImage ? (
+          <Image
+            src={mainImage}
+            alt={product.name}
+            fill
+            className={cn(
+              "object-contain p-3 transition-transform duration-300",
+              interactive && "group-hover:scale-105",
+              comingSoon && "opacity-60"
+            )}
+            sizes={CARD_SIZES}
+            quality={70}
+            priority={priority}
+          />
         ) : (
-          <Link href={`/tienda/${product.slug}`}>
-            <h3 className="font-medium text-sm line-clamp-2 hover:text-primary transition-colors">
-              {product.name}
-            </h3>
-          </Link>
+          <ImagePlaceholder className="absolute inset-0" />
         )}
 
-        {product.shortDescription && (
-          <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-            {product.shortDescription}
+        {comingSoon && <StatusPill>Próximamente</StatusPill>}
+        {outOfStock && <StatusPill>Sin stock</StatusPill>}
+      </div>
+
+      <div className="pt-3 space-y-1">
+        {categoryName && (
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            {categoryName}
           </p>
         )}
 
-        <div className="mt-auto pt-3">
-          {comingSoon ? (
-            // Sin precio: solo la tag atenuada.
-            <div className="flex">
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                Próximamente
-              </span>
-            </div>
-          ) : (
-            // Bloque de precio. El tachado y la descripción reservan su línea
-            // siempre, para que el renglón del precio + botón quede alineado.
-            <>
-              <p className="h-4 text-xs leading-4 text-muted-foreground line-through">
-                {priceInfo.hasDiscount ? formatCurrency(priceInfo.original) : ""}
-              </p>
-              <div className="flex items-end justify-between gap-2">
-                <p
-                  className={cn(
-                    "text-lg font-semibold",
-                    priceInfo.hasDiscount && "text-primary"
-                  )}
-                >
-                  {formatCurrency(priceInfo.final)}
-                </p>
-                <AddToCartButton product={product} size="sm" />
-              </div>
-              <p className="h-4 mt-0.5 text-[11px] leading-4 text-primary/90 line-clamp-1">
-                {priceInfo.description ?? ""}
-              </p>
-            </>
+        <h3
+          className={cn(
+            "text-sm font-medium leading-5 line-clamp-2 transition-colors",
+            interactive && "group-hover:text-primary"
           )}
-        </div>
+        >
+          {product.name}
+        </h3>
+
+        {!comingSoon && (
+          <>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <span
+                className={cn(
+                  "text-base font-semibold",
+                  priceInfo.hasDiscount && "text-primary"
+                )}
+              >
+                {formatCurrency(priceInfo.final)}
+              </span>
+              {priceInfo.hasDiscount && (
+                <span className="text-xs text-muted-foreground line-through">
+                  {formatCurrency(priceInfo.original)}
+                </span>
+              )}
+            </div>
+            {priceInfo.hasDiscount && priceInfo.description && (
+              <p className="text-[11px] text-primary/90 line-clamp-1">
+                {priceInfo.description}
+              </p>
+            )}
+          </>
+        )}
       </div>
+    </>
+  );
+
+  return (
+    <div className="group relative flex flex-col">
+      {interactive ? (
+        <Link href={`/tienda/${product.slug}`} className="block">
+          {content}
+        </Link>
+      ) : (
+        <div>{content}</div>
+      )}
+
+      {/* Hermano del Link (no anidado) para no meter un botón adentro de un <a>. */}
+      {interactive && (
+        <AddToCartButton
+          product={product}
+          variant="icon"
+          className="absolute top-2 right-2 z-10"
+        />
+      )}
     </div>
   );
 }

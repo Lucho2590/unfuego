@@ -6,6 +6,11 @@ import type { CartItem } from "../types";
 
 interface CartStore {
   items: CartItem[];
+  /** Estado del drawer. Vive acá para poder abrirlo desde cualquier lado (toast, card, navbar). */
+  isOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
+  setOpen: (open: boolean) => void;
   addItem: (item: CartItem) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -18,6 +23,11 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      isOpen: false,
+
+      openCart: () => set({ isOpen: true }),
+      closeCart: () => set({ isOpen: false }),
+      setOpen: (open) => set({ isOpen: open }),
 
       addItem: (item) =>
         set((state) => {
@@ -65,6 +75,8 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "unfuego-cart",
+      // Solo persistimos los ítems: el drawer no tiene que reaparecer abierto al recargar.
+      partialize: (state) => ({ items: state.items }),
     }
   )
 );
