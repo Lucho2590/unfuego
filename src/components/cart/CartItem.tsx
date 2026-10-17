@@ -27,7 +27,7 @@ export function CartItem({ item }: CartItemProps) {
             sizes="64px"
           />
         ) : (
-          <ImagePlaceholder className="absolute inset-0" />
+          <ImagePlaceholder className="absolute inset-0" sizes="64px" />
         )}
       </div>
       <div className="flex-1 min-w-0">

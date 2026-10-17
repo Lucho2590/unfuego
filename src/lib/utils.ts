@@ -159,3 +159,22 @@ export function maskEmail(email: string): string {
   const shown = user.slice(0, 2)
   return `${shown}${"•".repeat(Math.max(1, user.length - 2))}@${domain}`
 }
+
+// ─── Manual de armado ───
+
+/** Ruta (relativa al sitio) de la vista previa del manual de un producto. */
+export function getManualPreviewPath(slug: string): string {
+  return `/tienda/${slug}/manual`
+}
+
+/**
+ * URL (relativa) del PDF del manual servido por la tienda (proxy a Storage). `manualUrl`
+ * solo se usa para derivar un hash corto de versión y romper la caché cuando cambia.
+ */
+export function getManualFilePath(slug: string, manualUrl: string): string {
+  let hash = 0
+  for (let i = 0; i < manualUrl.length; i++) {
+    hash = (hash * 31 + manualUrl.charCodeAt(i)) | 0
+  }
+  return `/api/products/${slug}/manual?v=${(hash >>> 0).toString(36)}`
+}

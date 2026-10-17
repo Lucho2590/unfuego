@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus, FileDown } from "lucide-react";
+import Link from "next/link";
+import { Minus, Plus, FileDown, Eye } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { formatCurrency, getProductPrice } from "@/lib/utils";
+import { formatCurrency, getManualPreviewPath, getProductPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "./ProductImageGallery";
 import { ProductDescription } from "./ProductDescription";
@@ -90,16 +91,32 @@ export function ProductDetail({ product }: ProductDetailProps) {
         )}
 
         {product.manualUrl && (
-          <Button asChild variant="outline" size="lg" className="w-full">
-            <a
-              href={product.manualUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="lg" className="flex-1 min-w-0">
+              <a
+                href={product.manualUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FileDown className="w-4 h-4 mr-2" />
+                <span className="truncate">
+                  {product.manualLabel || "Descargar manual (PDF)"}
+                </span>
+              </a>
+            </Button>
+            {/* El "ojito": vista previa del PDF dentro de la tienda, sin descargarlo. */}
+            <Button
+              asChild
+              variant="outline"
+              size="icon-lg"
+              aria-label="Ver manual sin descargar"
+              title="Ver manual sin descargar"
             >
-              <FileDown className="w-4 h-4 mr-2" />
-              {product.manualLabel || "Descargar manual (PDF)"}
-            </a>
-          </Button>
+              <Link href={getManualPreviewPath(product.slug)}>
+                <Eye className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
 

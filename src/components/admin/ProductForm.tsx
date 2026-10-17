@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
   formatThousands,
   onlyDigits,
   formatCurrency,
+  getManualPreviewPath,
   getProductPrice,
 } from "@/lib/utils";
 import { applyPaymentAdjustment } from "@/lib/pricing";
@@ -597,6 +598,9 @@ export function ProductForm({
             placeholder="Descargar manual (PDF)"
           />
         </div>
+        {form.manualUrl && form.slug && (
+          <ManualPreviewLink slug={form.slug} saved={isEditing && form.slug === product?.slug} />
+        )}
       </div>
 
       <div className="flex gap-3">
@@ -616,5 +620,52 @@ export function ProductForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Link de la vista previa del manual dentro de la tienda (la URL para imprimir en el QR del
+ * producto). Se arma con el slug actual; si todavía no se guardó, se avisa.
+ */
+function ManualPreviewLink({ slug, saved }: { slug: string; saved: boolean }) {
+  const path = getManualPreviewPath(slug);
+  // El origin solo existe en el cliente: en SSR se muestra la ruta relativa y al hidratar se
+  // completa, sin desincronizar la hidratación.
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => ""
+  );
+  const url = `${origin}${path}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("No se pudo copiar el link");
+    }
+  };
+
+  return (
+    <div className="space-y-1 pt-1">
+      <Label>Link de vista previa (para el QR)</Label>
+      <div className="flex items-center gap-2">
+        <Input value={url} readOnly className="font-mono text-xs" />
+        <Button type="button" variant="outline" size="sm" onClick={copy}>
+          Copiar
+        </Button>
+        <Button type="button" variant="outline" size="sm" asChild>
+          <a href={path} target="_blank" rel="noopener noreferrer">
+            Abrir
+          </a>
+        </Button>
+      </div>
+      {!saved && (
+        <p className="text-xs text-muted-foreground">
+          El link funciona una vez guardado el producto con este slug.
+        </p>
+      )}
+    </div>
   );
 }

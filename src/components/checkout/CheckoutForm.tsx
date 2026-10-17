@@ -302,7 +302,7 @@ export function CheckoutForm() {
                       sizes="48px"
                     />
                   ) : (
-                    <ImagePlaceholder className="absolute inset-0" />
+                    <ImagePlaceholder className="absolute inset-0" sizes="48px" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
