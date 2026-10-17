@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ import {
   getProductPrice,
   PUBLIC_SITE_URL,
 } from "@/lib/utils";
-import { generateManualQr, downloadBlob } from "@/lib/qr/manual-qr";
+import { generateManualQr, generateManualCard, downloadBlob } from "@/lib/qr/manual-qr";
 import { applyPaymentAdjustment } from "@/lib/pricing";
 import { toast } from "sonner";
 import type {
@@ -608,7 +608,11 @@ export function ProductForm({
           />
         </div>
         {form.manualUrl && form.slug && (
-          <ManualPreviewLink slug={form.slug} saved={isEditing && form.slug === product?.slug} />
+          <ManualPreviewLink
+            slug={form.slug}
+            productName={form.name}
+            saved={isEditing && form.slug === product?.slug}
+          />
         )}
       </div>
 
@@ -633,13 +637,40 @@ export function ProductForm({
 }
 
 /**
- * Link de la vista previa del manual dentro de la tienda y descarga del QR que apunta ahí.
- * Siempre con el dominio público (PUBLIC_SITE_URL): el QR va impreso con el producto.
+ * Link de la vista previa del manual dentro de la tienda y descarga del QR que apunta ahí
+ * (solo el código o la tarjeta completa). Siempre con el dominio público (PUBLIC_SITE_URL):
+ * el QR va impreso con el producto.
  */
-function ManualPreviewLink({ slug, saved }: { slug: string; saved: boolean }) {
+function ManualPreviewLink({
+  slug,
+  productName,
+  saved,
+}: {
+  slug: string;
+  productName: string;
+  saved: boolean;
+}) {
   const path = getManualPreviewPath(slug);
   const url = `${PUBLIC_SITE_URL}${path}`;
   const [generating, setGenerating] = useState(false);
+  const [thumb, setThumb] = useState<string | null>(null);
+
+  // Miniatura del QR para ver el diseño antes de bajarlo. Si falla, simplemente no se muestra.
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    generateManualQr(url)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setThumb(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url]);
 
   const copy = async () => {
     try {
@@ -650,10 +681,17 @@ function ManualPreviewLink({ slug, saved }: { slug: string; saved: boolean }) {
     }
   };
 
-  const downloadQr = async () => {
+  const download = async (kind: "qr" | "card") => {
     setGenerating(true);
     try {
-      downloadBlob(await generateManualQr(url), `qr-manual-${slug}.png`);
+      if (kind === "qr") {
+        downloadBlob(await generateManualQr(url), `qr-manual-${slug}.png`);
+      } else {
+        downloadBlob(
+          await generateManualCard(url, productName.trim() || "Manual de armado"),
+          `tarjeta-qr-manual-${slug}.png`
+        );
+      }
     } catch (error) {
       console.error("QR error:", error);
       toast.error("No se pudo generar el QR");
@@ -663,7 +701,7 @@ function ManualPreviewLink({ slug, saved }: { slug: string; saved: boolean }) {
   };
 
   return (
-    <div className="space-y-1 pt-1">
+    <div className="space-y-2 pt-1">
       <Label>Link de vista previa (para el QR)</Label>
       <div className="flex flex-wrap items-center gap-2">
         <Input value={url} readOnly className="min-w-0 flex-1 font-mono text-xs" />
@@ -676,15 +714,46 @@ function ManualPreviewLink({ slug, saved }: { slug: string; saved: boolean }) {
             Abrir
           </a>
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={downloadQr} disabled={generating}>
-          {generating ? "Generando…" : "Descargar QR"}
-        </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {saved
-          ? "El QR es un PNG de 1024 px con la llama en el centro, listo para imprimir."
-          : "El link y el QR funcionan una vez guardado el producto con este slug."}
-      </p>
+      <div className="flex items-start gap-4">
+        {thumb && (
+          // eslint-disable-next-line @next/next/no-img-element -- object URL local, no pasa por el optimizer
+          <img
+            src={thumb}
+            alt="Vista previa del QR"
+            width={112}
+            height={112}
+            className="shrink-0 rounded-md border border-border"
+          />
+        )}
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => download("qr")}
+              disabled={generating}
+            >
+              {generating ? "Generando…" : "Descargar QR"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => download("card")}
+              disabled={generating}
+            >
+              Descargar tarjeta
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {saved
+              ? "QR: PNG de 1024 px para pegar en tus diseños. Tarjeta: 1200×1600 px con el logo y el nombre del producto, lista para imprimir."
+              : "El link y el QR funcionan una vez guardado el producto con este slug."}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
