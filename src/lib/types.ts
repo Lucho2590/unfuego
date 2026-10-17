@@ -8,6 +8,9 @@ export interface Product {
   images: string[];
   manualUrl?: string | null; // URL de descarga del manual de armado en PDF (Firebase Storage)
   manualLabel?: string | null; // texto del botón de descarga; si es null usa el default
+  // Páginas del manual pre-renderizadas como imágenes (WebP en Storage), en orden. Las usa
+  // la vista previa en la tienda para no tener que bajar el PDF entero en el celular.
+  manualPages?: string[] | null;
   category: string;
   stock: number;
   isActive: boolean;

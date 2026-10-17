@@ -54,7 +54,7 @@ export function ProductCard({
             priority={priority}
           />
         ) : (
-          <ImagePlaceholder className="absolute inset-0" />
+          <ImagePlaceholder className="absolute inset-0" sizes={CARD_SIZES} />
         )}
 
         {comingSoon && <StatusPill>Próximamente</StatusPill>}

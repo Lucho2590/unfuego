@@ -77,6 +77,14 @@ export function getProductManualPath(productId: string, fileName: string): strin
   return `products/${productId}/manual-${fileName}`;
 }
 
+/**
+ * Path de una página del manual renderizada como imagen. Al mismo nivel que el manual y las
+ * fotos (sin subcarpeta) para que la cubra la misma regla de Storage.
+ */
+export function getProductManualPagePath(productId: string, stamp: number, page: number): string {
+  return `products/${productId}/manual-page-${stamp}-${String(page).padStart(3, "0")}.webp`;
+}
+
 export function getTransferProofPath(orderId: string, fileName: string): string {
   return `transfer-proofs/${orderId}/${fileName}`;
 }

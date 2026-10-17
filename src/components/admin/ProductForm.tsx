@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,11 @@ import {
   formatThousands,
   onlyDigits,
   formatCurrency,
+  getManualPreviewPath,
   getProductPrice,
+  PUBLIC_SITE_URL,
 } from "@/lib/utils";
+import { generateManualQr, generateManualCard, downloadBlob } from "@/lib/qr/manual-qr";
 import { applyPaymentAdjustment } from "@/lib/pricing";
 import { toast } from "sonner";
 import type {
@@ -214,6 +217,7 @@ export function ProductForm({
     images: product?.images ?? [],
     manualUrl: product?.manualUrl ?? "",
     manualLabel: product?.manualLabel ?? "",
+    manualPages: product?.manualPages ?? [],
     // Ajustes por medio de pago: se guardan planos (todos string) para que `updateField`
     // siga sirviendo, y se arma el objeto anidado recién en handleSubmit.
     mpAdjType: product?.paymentAdjustments?.mercadopago?.type ?? "",
@@ -586,7 +590,13 @@ export function ProductForm({
         <PdfUploader
           productId={product?.id ?? draftId}
           manualUrl={form.manualUrl}
-          onChange={(url) => updateField("manualUrl", url)}
+          manualPages={form.manualPages}
+          onChange={(url) => {
+            updateField("manualUrl", url);
+            // Las páginas pre-renderizadas corresponden al PDF anterior.
+            updateField("manualPages", []);
+          }}
+          onPagesChange={(pages) => updateField("manualPages", pages)}
         />
         <div className="space-y-2 pt-1">
           <Label htmlFor="manualLabel">Texto del botón de descarga</Label>
@@ -597,6 +607,13 @@ export function ProductForm({
             placeholder="Descargar manual (PDF)"
           />
         </div>
+        {form.manualUrl && form.slug && (
+          <ManualPreviewLink
+            slug={form.slug}
+            productName={form.name}
+            saved={isEditing && form.slug === product?.slug}
+          />
+        )}
       </div>
 
       <div className="flex gap-3">
@@ -616,5 +633,127 @@ export function ProductForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Link de la vista previa del manual dentro de la tienda y descarga del QR que apunta ahí
+ * (solo el código o la tarjeta completa). Siempre con el dominio público (PUBLIC_SITE_URL):
+ * el QR va impreso con el producto.
+ */
+function ManualPreviewLink({
+  slug,
+  productName,
+  saved,
+}: {
+  slug: string;
+  productName: string;
+  saved: boolean;
+}) {
+  const path = getManualPreviewPath(slug);
+  const url = `${PUBLIC_SITE_URL}${path}`;
+  const [generating, setGenerating] = useState(false);
+  const [thumb, setThumb] = useState<string | null>(null);
+
+  // Miniatura del QR para ver el diseño antes de bajarlo. Si falla, simplemente no se muestra.
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    generateManualQr(url)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setThumb(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("No se pudo copiar el link");
+    }
+  };
+
+  const download = async (kind: "qr" | "card") => {
+    setGenerating(true);
+    try {
+      if (kind === "qr") {
+        downloadBlob(await generateManualQr(url), `qr-manual-${slug}.png`);
+      } else {
+        downloadBlob(
+          await generateManualCard(url, productName.trim() || "Manual de armado"),
+          `tarjeta-qr-manual-${slug}.png`
+        );
+      }
+    } catch (error) {
+      console.error("QR error:", error);
+      toast.error("No se pudo generar el QR");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 pt-1">
+      <Label>Link de vista previa (para el QR)</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={url} readOnly className="min-w-0 flex-1 font-mono text-xs" />
+        <Button type="button" variant="outline" size="sm" onClick={copy}>
+          Copiar
+        </Button>
+        {/* Abre la versión local/actual (ruta relativa), no la de producción. */}
+        <Button type="button" variant="outline" size="sm" asChild>
+          <a href={path} target="_blank" rel="noopener noreferrer">
+            Abrir
+          </a>
+        </Button>
+      </div>
+      <div className="flex items-start gap-4">
+        {thumb && (
+          // eslint-disable-next-line @next/next/no-img-element -- object URL local, no pasa por el optimizer
+          <img
+            src={thumb}
+            alt="Vista previa del QR"
+            width={112}
+            height={112}
+            className="shrink-0 rounded-md border border-border"
+          />
+        )}
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => download("qr")}
+              disabled={generating}
+            >
+              {generating ? "Generando…" : "Descargar QR"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => download("card")}
+              disabled={generating}
+            >
+              Descargar tarjeta
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {saved
+              ? "QR: PNG de 1024 px para pegar en tus diseños. Tarjeta: 1200×1600 px con el logo y el nombre del producto, lista para imprimir."
+              : "El link y el QR funcionan una vez guardado el producto con este slug."}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

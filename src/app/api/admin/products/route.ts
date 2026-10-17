@@ -4,6 +4,13 @@ import { revalidateTag } from "next/cache";
 import { verifySession, fsAdd, fsUpdate, fsDelete } from "@/lib/firebase/admin";
 import { sanitizePaymentAdjustments } from "@/lib/pricing";
 
+/** Solo URLs (strings no vacíos), y sin manual no hay páginas: evita dejar imágenes huérfanas. */
+function sanitizeManualPages(manualUrl: unknown, pages: unknown): string[] | null {
+  if (!manualUrl || !Array.isArray(pages)) return null;
+  const urls = pages.filter((p): p is string => typeof p === "string" && p.length > 0);
+  return urls.length > 0 ? urls : null;
+}
+
 async function verifyAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
   const session = cookieStore.get("__session");
@@ -33,6 +40,7 @@ export async function POST(request: Request) {
       images: body.images ?? [],
       manualUrl: body.manualUrl || null,
       manualLabel: body.manualLabel?.trim() || null,
+      manualPages: sanitizeManualPages(body.manualUrl, body.manualPages),
       sortOrder: body.sortOrder ?? null,
       discountType: body.discountType ?? null,
       discountValue:
@@ -65,6 +73,7 @@ export async function PUT(request: Request) {
       comingSoon: data.comingSoon ?? false,
       manualUrl: data.manualUrl || null,
       manualLabel: data.manualLabel?.trim() || null,
+      manualPages: sanitizeManualPages(data.manualUrl, data.manualPages),
       sortOrder:
         data.sortOrder === null || data.sortOrder === undefined
           ? null

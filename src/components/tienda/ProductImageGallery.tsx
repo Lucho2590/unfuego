@@ -24,7 +24,7 @@ export function ProductImageGallery({
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (images.length === 0) {
-    return <ImagePlaceholder className="aspect-square w-full rounded-lg" />;
+    return <ImagePlaceholder className="aspect-square w-full rounded-lg" sizes={GALLERY_SIZES} />;
   }
 
   return (
