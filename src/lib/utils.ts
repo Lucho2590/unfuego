@@ -160,6 +160,14 @@ export function maskEmail(email: string): string {
   return `${shown}${"•".repeat(Math.max(1, user.length - 2))}@${domain}`
 }
 
+// ─── Sitio público ───
+
+/**
+ * Dominio público de la tienda. Para links que salen del sitio (QR impresos, etc.): no se usa
+ * `window.location.origin` porque en local sería localhost y en preview de Vercel un hash.
+ */
+export const PUBLIC_SITE_URL = "https://www.unfuegomdq.com.ar"
+
 // ─── Manual de armado ───
 
 /** Ruta (relativa al sitio) de la vista previa del manual de un producto. */

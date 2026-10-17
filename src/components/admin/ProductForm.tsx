@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,9 @@ import {
   formatCurrency,
   getManualPreviewPath,
   getProductPrice,
+  PUBLIC_SITE_URL,
 } from "@/lib/utils";
+import { generateManualQr, downloadBlob } from "@/lib/qr/manual-qr";
 import { applyPaymentAdjustment } from "@/lib/pricing";
 import { toast } from "sonner";
 import type {
@@ -631,19 +633,13 @@ export function ProductForm({
 }
 
 /**
- * Link de la vista previa del manual dentro de la tienda (la URL para imprimir en el QR del
- * producto). Se arma con el slug actual; si todavía no se guardó, se avisa.
+ * Link de la vista previa del manual dentro de la tienda y descarga del QR que apunta ahí.
+ * Siempre con el dominio público (PUBLIC_SITE_URL): el QR va impreso con el producto.
  */
 function ManualPreviewLink({ slug, saved }: { slug: string; saved: boolean }) {
   const path = getManualPreviewPath(slug);
-  // El origin solo existe en el cliente: en SSR se muestra la ruta relativa y al hidratar se
-  // completa, sin desincronizar la hidratación.
-  const origin = useSyncExternalStore(
-    () => () => {},
-    () => window.location.origin,
-    () => ""
-  );
-  const url = `${origin}${path}`;
+  const url = `${PUBLIC_SITE_URL}${path}`;
+  const [generating, setGenerating] = useState(false);
 
   const copy = async () => {
     try {
@@ -654,25 +650,41 @@ function ManualPreviewLink({ slug, saved }: { slug: string; saved: boolean }) {
     }
   };
 
+  const downloadQr = async () => {
+    setGenerating(true);
+    try {
+      downloadBlob(await generateManualQr(url), `qr-manual-${slug}.png`);
+    } catch (error) {
+      console.error("QR error:", error);
+      toast.error("No se pudo generar el QR");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-1 pt-1">
       <Label>Link de vista previa (para el QR)</Label>
-      <div className="flex items-center gap-2">
-        <Input value={url} readOnly className="font-mono text-xs" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={url} readOnly className="min-w-0 flex-1 font-mono text-xs" />
         <Button type="button" variant="outline" size="sm" onClick={copy}>
           Copiar
         </Button>
+        {/* Abre la versión local/actual (ruta relativa), no la de producción. */}
         <Button type="button" variant="outline" size="sm" asChild>
           <a href={path} target="_blank" rel="noopener noreferrer">
             Abrir
           </a>
         </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={downloadQr} disabled={generating}>
+          {generating ? "Generando…" : "Descargar QR"}
+        </Button>
       </div>
-      {!saved && (
-        <p className="text-xs text-muted-foreground">
-          El link funciona una vez guardado el producto con este slug.
-        </p>
-      )}
+      <p className="text-xs text-muted-foreground">
+        {saved
+          ? "El QR es un PNG de 1024 px con la llama en el centro, listo para imprimir."
+          : "El link y el QR funcionan una vez guardado el producto con este slug."}
+      </p>
     </div>
   );
 }
