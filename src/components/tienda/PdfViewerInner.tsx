@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // El worker tiene que configurarse en el MISMO módulo que usa <Document>, si no react-pdf lo
 // pisa con su default (ver README de react-pdf). `pdfjs-dist` está como dependencia directa
@@ -22,9 +23,14 @@ interface PdfViewerInnerProps {
   error: React.ReactNode;
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
+function Centered({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-sm text-muted-foreground">
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-3 py-16 text-center text-sm text-muted-foreground",
+        className
+      )}
+    >
       {children}
     </div>
   );
@@ -34,6 +40,10 @@ export default function PdfViewerInner({ url, error }: PdfViewerInnerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number>();
   const [numPages, setNumPages] = useState<number>();
+  // Páginas ya pintadas. pdf.js crea el canvas (blanco) apenas conoce el tamaño de la página,
+  // pero lo dibuja recién cuando terminó de bajar sus imágenes: con un PDF pesado eso es una
+  // hoja en blanco durante varios segundos. Hasta entonces se muestra un placeholder oscuro.
+  const [rendered, setRendered] = useState<Set<number>>(() => new Set());
 
   // Las páginas se renderizan al ancho real del contenedor (y se re-renderizan si cambia:
   // rotar el teléfono, achicar la ventana).
@@ -63,22 +73,38 @@ export default function PdfViewerInner({ url, error }: PdfViewerInnerProps) {
       >
         {width &&
           numPages &&
-          Array.from({ length: numPages }, (_, index) => (
-            <Page
-              key={index}
-              pageNumber={index + 1}
-              width={width}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              className="overflow-hidden rounded-md shadow-lg"
-              loading={
-                <div
-                  className="animate-pulse rounded-md bg-muted"
-                  style={{ width, height: width * 1.414 }}
+          Array.from({ length: numPages }, (_, index) => {
+            const pageNumber = index + 1;
+            const isRendered = rendered.has(pageNumber);
+            return (
+              <div
+                key={pageNumber}
+                className="relative overflow-hidden rounded-md bg-muted shadow-lg"
+                style={{ width, minHeight: isRendered ? undefined : width * 1.414 }}
+              >
+                {!isRendered && (
+                  <Centered className="absolute inset-0">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Cargando página {pageNumber} de {numPages}…
+                  </Centered>
+                )}
+                <Page
+                  pageNumber={pageNumber}
+                  width={width}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  loading={null}
+                  onRenderSuccess={() =>
+                    setRendered((prev) => new Set(prev).add(pageNumber))
+                  }
+                  className={cn(
+                    "transition-opacity duration-300",
+                    !isRendered && "absolute inset-0 opacity-0"
+                  )}
                 />
-              }
-            />
-          ))}
+              </div>
+            );
+          })}
       </Document>
     </div>
   );
