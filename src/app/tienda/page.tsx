@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getProducts } from "@/lib/firebase/products";
 import { getSections } from "@/lib/firebase/sections";
 import { TiendaCatalog } from "@/components/tienda/TiendaCatalog";
+import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "Tienda | Un Fuego",
@@ -18,19 +19,22 @@ export default async function TiendaPage() {
   ]);
 
   return (
-    <div className="pt-24 pb-16 px-[var(--section-padding-x)]">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-display-md font-light tracking-tight mb-3">
-            Tienda
-          </h1>
-          <p className="text-muted-foreground">
-            Objetos simples, resistentes y pensados para moverse.
-          </p>
-        </div>
+    <>
+      <div className="pt-24 pb-16 px-[var(--section-padding-x)]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-display-md font-light tracking-tight mb-3">
+              Tienda
+            </h1>
+            <p className="text-muted-foreground">
+              Objetos simples, resistentes y pensados para moverse.
+            </p>
+          </div>
 
-        <TiendaCatalog products={products} sections={sections} />
+          <TiendaCatalog products={products} sections={sections} />
+        </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 }
