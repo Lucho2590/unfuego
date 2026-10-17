@@ -215,6 +215,7 @@ export function ProductForm({
     images: product?.images ?? [],
     manualUrl: product?.manualUrl ?? "",
     manualLabel: product?.manualLabel ?? "",
+    manualPages: product?.manualPages ?? [],
     // Ajustes por medio de pago: se guardan planos (todos string) para que `updateField`
     // siga sirviendo, y se arma el objeto anidado recién en handleSubmit.
     mpAdjType: product?.paymentAdjustments?.mercadopago?.type ?? "",
@@ -587,7 +588,13 @@ export function ProductForm({
         <PdfUploader
           productId={product?.id ?? draftId}
           manualUrl={form.manualUrl}
-          onChange={(url) => updateField("manualUrl", url)}
+          manualPages={form.manualPages}
+          onChange={(url) => {
+            updateField("manualUrl", url);
+            // Las páginas pre-renderizadas corresponden al PDF anterior.
+            updateField("manualPages", []);
+          }}
+          onPagesChange={(pages) => updateField("manualPages", pages)}
         />
         <div className="space-y-2 pt-1">
           <Label htmlFor="manualLabel">Texto del botón de descarga</Label>

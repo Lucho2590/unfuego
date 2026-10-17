@@ -5,6 +5,7 @@ import { ArrowLeft, FileDown } from "lucide-react";
 import { getProductBySlug } from "@/lib/firebase/products";
 import { getManualFilePath } from "@/lib/utils";
 import { PdfViewer } from "@/components/tienda/PdfViewer";
+import { ManualPages } from "@/components/tienda/ManualPages";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/layout/Footer";
 
@@ -73,10 +74,16 @@ export default async function ProductManualPage({ params }: Props) {
             </Button>
           </div>
 
-          <PdfViewer
-            url={getManualFilePath(product.slug, product.manualUrl)}
-            downloadUrl={product.manualUrl}
-          />
+          {/* Con páginas pre-renderizadas se muestran imágenes (rápido en el celular); si el
+              manual se cargó sin generarlas, se cae al visor pdf.js sobre el PDF entero. */}
+          {product.manualPages && product.manualPages.length > 0 ? (
+            <ManualPages pages={product.manualPages} productName={product.name} />
+          ) : (
+            <PdfViewer
+              url={getManualFilePath(product.slug, product.manualUrl)}
+              downloadUrl={product.manualUrl}
+            />
+          )}
         </div>
       </div>
       <Footer />
